@@ -1,0 +1,56 @@
+{
+  "name": "wxgraph",
+  "version": "0.1.0",
+  "description": "Semantic code graph for WeChat mini-programs so coding agents can trace render impact",
+  "license": "MIT",
+  "author": "SuperMarioYL",
+  "type": "module",
+  "bin": {
+    "wxgraph": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "wechat",
+    "miniprogram",
+    "wxml",
+    "code-graph",
+    "impact-analysis",
+    "mcp"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SuperMarioYL/wxgraph.git"
+  },
+  "homepage": "https://github.com/SuperMarioYL/wxgraph#readme",
+  "bugs": {
+    "url": "https://github.com/SuperMarioYL/wxgraph/issues"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "acorn": "^8.14.0",
+    "commander": "^12.1.0",
+    "fast-glob": "^3.3.2",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

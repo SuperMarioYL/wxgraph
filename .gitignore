@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+*.tsbuildinfo
+
+# test and coverage output
+coverage/
+
+# generated graph
+.wxgraph/
+
+# logs
+*.log
+
+# editor and OS files
+.DS_Store
+.idea/
+.vscode/
+
+# local agent config
+.claude/
+CLAUDE.md
+
+# build scratch
+.build_metadata*
+.builder_*
+BUILD_SETUP_NEXT_STEPS.md
+PUBLISH_BLOCKED.md
+.spawn.*
+.stage_*
