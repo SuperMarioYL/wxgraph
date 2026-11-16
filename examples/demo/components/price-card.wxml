@@ -1,0 +1,7 @@
+<view class="price-card">
+  <text class="price" bindtap="onTap">¥{{price}}</text>
+
+  <view class="edit-mask" wx:if="{{editing}}" catch:tap="onTap">
+    <text class="edit-hint">Tap to set a new price</text>
+  </view>
+</view>

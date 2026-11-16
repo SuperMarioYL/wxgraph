@@ -1,0 +1,134 @@
+{
+  "product": "wxgraph",
+  "version": "0.1.0",
+  "recorded_at": "2026-11-17",
+  "environment": {
+    "node": "v22.23.1",
+    "npm": "10.9.8",
+    "os": "darwin arm64"
+  },
+  "input": {
+    "path": "examples/demo",
+    "kind": "synthetic native WeChat mini-program shipped in this repository",
+    "contains": [
+      "app.json declaring 2 main-package pages and one lowercase subpackages entry (packageOrder)",
+      "3 pages: pages/cart/index, pages/order/detail, packageOrder/pages/confirm/index",
+      "1 custom component: components/price-card with declared properties price and editing",
+      "WXML handler attributes in shorthand (bindtap) and colon (bind:edit, catch:tap) form",
+      "literal setData, nested literal setData, non-literal this.setData(patch) and one wx.cloud.callFunction"
+    ]
+  },
+  "commands": [
+    {
+      "command": "wxgraph build examples/demo",
+      "cwd": "repository root",
+      "exit_code": 0,
+      "stdout": "1 subpackage · 3 pages · 1 component · 19 wxml nodes · 57 edges · 34ms\nwrote .wxgraph/graph.json"
+    },
+    {
+      "command": "wxgraph impact components/price-card",
+      "cwd": "examples/demo",
+      "exit_code": 0,
+      "stdout": "components/price-card  (component)  included by 2 hosts\n\n├─ pages/cart/index.wxml:5  <price-card editing=\"{{editing}}\" price=\"{{item.unitPrice}}\">\n│    ← data editing  (pages/cart/index.js)\n│    ← data items[].unitPrice  (pages/cart/index.js)\n│    ├─ setData({items, editing}) in onEdit  pages/cart/index.js:20  →  <text>  components/price-card.wxml:2  [via prop:price]\n│    └─ setData({items, editing}) in onEdit  pages/cart/index.js:20  →  <view>  components/price-card.wxml:4  [via prop:editing]\n└─ pages/order/detail.wxml:4  <price-card price=\"{{order.total}}\">\n     ← data order.total  (pages/order/detail.js)\n     ├─ setData({order, order.no, order.total}) in onLoad  pages/order/detail.js:11  →  <text>  components/price-card.wxml:2  [via prop:price]\n     └─ setData({order.total}) in onEditPrice  pages/order/detail.js:17  →  <text>  components/price-card.wxml:2  [via prop:price]\n\n1 unresolved_setdata site(s):\n  pages/cart/index.js:12 in onLoad  this.setData(<non-literal>)"
+    },
+    {
+      "command": "wxgraph stats",
+      "cwd": "examples/demo",
+      "exit_code": 0,
+      "stdout": "graph     .wxgraph/graph.json\nstamp     f04300155bd352d3  14 source files\n\n1 subpackage · 3 pages · 1 component · 19 wxml nodes · 57 edges\n11 binds · 7 handles · 6 calls_setdata · 10 rerenders\n9 handlers · 6 setData sites · 1 cloud function"
+    },
+    {
+      "command": "wxgraph explain pages/cart/index.js:20",
+      "cwd": "examples/demo",
+      "exit_code": 0,
+      "stdout": "setData site  pages/cart/index.js:20  (owner pages/cart/index)\nhandler  onEdit  pages/cart/index.js:15\nkeys     items, editing\n\n  \"items\"  resolved [direct]  \"items\" -> items -> <view> pages/cart/index.wxml:4\n  \"items\"  resolved [prop:price]  \"items\" -> items[].unitPrice -> <price-card price> -> <text> price components/price-card.wxml:2\n  \"items\"  resolved [direct]  \"items\" -> items.length -> <view> pages/cart/index.wxml:8\n  \"editing\"  resolved [prop:editing]  \"editing\" -> editing -> <price-card editing> -> <view> editing components/price-card.wxml:4"
+    },
+    {
+      "command": "wxgraph impact components/price-card --json",
+      "cwd": "examples/demo",
+      "exit_code": 0,
+      "structured_result": {
+        "target": "components/price-card",
+        "hosts": [
+          "pages/cart/index",
+          "pages/order/detail"
+        ],
+        "rerenders": [
+          {
+            "handler": "onEdit",
+            "via": "prop:price",
+            "element": "components/price-card.wxml:2:text",
+            "elementTag": "text"
+          },
+          {
+            "handler": "onLoad",
+            "via": "prop:price",
+            "element": "components/price-card.wxml:2:text",
+            "elementTag": "text"
+          },
+          {
+            "handler": "onEditPrice",
+            "via": "prop:price",
+            "element": "components/price-card.wxml:2:text",
+            "elementTag": "text"
+          },
+          {
+            "handler": "onEdit",
+            "via": "prop:editing",
+            "element": "components/price-card.wxml:4:view",
+            "elementTag": "view"
+          }
+        ],
+        "unresolved_setdata": [
+          {
+            "owner": "pages/cart/index",
+            "file": "pages/cart/index.js",
+            "line": 12,
+            "handler": "onLoad"
+          }
+        ]
+      }
+    }
+  ],
+  "result": {
+    "subpackages": 1,
+    "pages": 3,
+    "components": 1,
+    "wxml_nodes": 19,
+    "data_fields": 11,
+    "handlers": 9,
+    "set_data_sites": 6,
+    "cloud_functions": 1,
+    "nodes": 50,
+    "edges": 57,
+    "binds": 11,
+    "handles": 7,
+    "calls_setdata": 6,
+    "rerenders": 10,
+    "hosts": 2,
+    "on_edit_rerenders": [
+      {
+        "element": "components/price-card.wxml:2:text",
+        "via": "prop:price"
+      },
+      {
+        "element": "components/price-card.wxml:4:view",
+        "via": "prop:editing"
+      }
+    ],
+    "unresolved_setdata": "pages/cart/index.js:12 (onLoad passes a non-literal object)"
+  },
+  "notes": [
+    "Build time is wall-clock on the recording machine; counts and file:line values are stable for this demo.",
+    "The stamp digest is derived from source file sizes and mtimes, so it differs on a fresh checkout even though the graph content is identical.",
+    "The demo is synthetic and shipped with the repository; no user project is represented."
+  ],
+  "limitations": [
+    "Native .wxml projects only; Taro, uni-app and kbone compiled output are not analysed.",
+    "Only .js sources are parsed; .ts files are not analysed.",
+    "WXSS and styling are out of scope: the graph has no stylesheet edges.",
+    "Cloud-function bodies are not parsed; only wx.cloud.callFunction call sites are recorded.",
+    "WXML expressions yield data paths, not evaluated values; ternaries and method calls are not computed.",
+    "No watch mode or incremental reindex: re-run wxgraph build after edits."
+  ]
+}

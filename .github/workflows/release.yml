@@ -1,0 +1,66 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Check tag matches VERSION
+        run: |
+          version="$(cat VERSION)"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "tag ${GITHUB_REF_NAME} does not match VERSION ${version}" >&2
+            exit 1
+          fi
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npx vitest run
+
+      - name: Build
+        run: npm run build
+
+      # Two assets: the installable package tarball (which contains dist/) and
+      # the bare tsup output. Both are attached to the release itself below,
+      # not left behind in the workflow artifact store.
+      - name: Pack release artifacts
+        run: |
+          out="${RUNNER_TEMP}/release"
+          mkdir -p "$out"
+          npm pack --pack-destination "$out"
+          tar -czf "$out/wxgraph-dist-${GITHUB_REF_NAME}.tar.gz" dist
+          cd "$out"
+          sha256sum ./*.tgz ./*.tar.gz > checksums.txt
+          cat checksums.txt
+
+      - name: Attach assets to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 \
+            || gh release create "${GITHUB_REF_NAME}" \
+                 --title "wxgraph ${GITHUB_REF_NAME}" \
+                 --notes "wxgraph ${GITHUB_REF_NAME}"
+          gh release upload "${GITHUB_REF_NAME}" \
+            "${RUNNER_TEMP}"/release/*.tgz \
+            "${RUNNER_TEMP}"/release/*.tar.gz \
+            "${RUNNER_TEMP}"/release/checksums.txt \
+            --clobber

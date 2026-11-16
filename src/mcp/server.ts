@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import * as path from "node:path";
 
@@ -167,10 +169,17 @@ export async function startMcpServer(projectDir = projectFromArgv(process.argv.s
   await server.connect(transport);
 }
 
-const invokedDirectly =
-  process.argv[1] !== undefined && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+/** Compare real paths so an npm bin symlink still starts the server. */
+function invokedAsMain(): boolean {
+  if (process.argv[1] === undefined) return false;
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
 
-if (invokedDirectly) {
+if (invokedAsMain()) {
   startMcpServer().catch((error: unknown) => {
     process.stderr.write(`wxgraph mcp: ${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 1;

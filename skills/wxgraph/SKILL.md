@@ -30,14 +30,16 @@ and tells you which hop failed when it cannot resolve one.
 
 ## How to call it
 
-MCP config (stdlib transport, no daemon):
+MCP config (stdlib transport, no daemon). Install the package first
+(`npm install -g .` or `npm link` from the wxgraph checkout) so `wxgraph-mcp` is
+on `PATH`:
 
 ```json
 {
   "mcpServers": {
     "wxgraph": {
-      "command": "npx",
-      "args": ["-y", "wxgraph-mcp"]
+      "command": "wxgraph-mcp",
+      "args": ["--project", "/absolute/path/to/miniprogram"]
     }
   }
 }

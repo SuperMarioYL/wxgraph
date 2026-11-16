@@ -1,0 +1,6 @@
+<view class="confirm">
+  <text class="heading">Order {{orderNo}}</text>
+  <text class="total">Total ¥{{total}}</text>
+
+  <button class="submit" bindtap="onSubmit">Place order</button>
+</view>

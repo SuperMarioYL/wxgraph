@@ -1,0 +1,7 @@
+<view class="order-detail">
+  <text class="order-no">Order {{order.no}}</text>
+
+  <price-card price="{{order.total}}" bind:edit="onEditPrice" />
+
+  <text class="hint" catch:tap="onHint">{{hint}}</text>
+</view>

@@ -1,0 +1,9 @@
+{
+  "description": "wxgraph demo mini-program",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "*"
+    }
+  ]
+}

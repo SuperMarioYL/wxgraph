@@ -1,0 +1,19 @@
+{
+  "pages": [
+    "pages/cart/index",
+    "pages/order/detail"
+  ],
+  "subpackages": [
+    {
+      "root": "packageOrder",
+      "pages": [
+        "pages/confirm/index"
+      ]
+    }
+  ],
+  "window": {
+    "navigationBarTitleText": "wxgraph demo"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

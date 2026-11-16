@@ -1,0 +1,13 @@
+<view class="cart">
+  <text class="title">Cart</text>
+
+  <view class="lines" wx:for="{{items}}" wx:for-item="item" wx:key="id">
+    <price-card price="{{item.unitPrice}}" editing="{{editing}}" bind:edit="onEdit" />
+  </view>
+
+  <view class="empty" wx:if="{{items.length === 0}}">
+    <text>Nothing here yet.</text>
+  </view>
+
+  <button class="checkout" bindtap="onCheckout">Checkout</button>
+</view>

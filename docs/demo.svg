@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1013" height="419" viewBox="0 0 1013 419" role="img" aria-labelledby="title desc">
+  <title id="title">wxgraph terminal demo</title>
+  <desc id="desc">A terminal recording: wxgraph build examples/demo reports 1 subpackage, 3 pages, 1 component, 19 wxml nodes and 57 edges. wxgraph impact components/price-card then lists two host templates, pages/cart/index.wxml and pages/order/detail.wxml, showing the data path feeding the price property and the two component nodes re-rendered by onEdit's setData: the price text via prop:price and the edit mask via prop:editing.</desc>
+  <defs>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6e56cf" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#6e56cf" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="winclip">
+      <rect x="14" y="14" width="985" height="391" rx="12"/>
+    </clipPath>
+  </defs>
+  <style>
+    .win { fill: #0b0e14; stroke: #262c3a; stroke-width: 1; }
+    .bar { fill: #11151f; }
+    .rule { stroke: #1f2533; stroke-width: 1; }
+    .title { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 10.5px; fill: #6b7280; }
+    .dot1 { fill: #ff5f57; } .dot2 { fill: #febc2e; } .dot3 { fill: #28c840; }
+    .ln, .ln * { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 11px; }
+    .ln { fill: #c9d1d9; }
+    .prompt { fill: #7ee787; font-weight: 700; }
+    .cmd { fill: #f0f6fc; font-weight: 600; }
+    .strong { fill: #e6edf3; font-weight: 700; }
+    .dim { fill: #8b949e; }
+    .tree { fill: #c9d1d9; }
+    .data { fill: #79c0ff; }
+    .via { fill: #ffa657; }
+    .timing { fill: #7ee787; }
+    .warn-line { fill: #f0883e; }
+    .cursor { fill: #7ee787; }
+    @media (prefers-reduced-motion: no-preference) {
+      .cursor { animation: blink 1.15s steps(1, end) infinite; }
+      .via { animation: settle 2.8s ease-in-out infinite; }
+    }
+    @keyframes blink { 0%, 45% { opacity: 1; } 50%, 95% { opacity: 0; } 100% { opacity: 1; } }
+    @keyframes settle { 0%, 100% { opacity: 1; } 50% { opacity: 0.68; } }
+  </style>
+  <g clip-path="url(#winclip)">
+    <rect class="win" x="14" y="14" width="985" height="391" rx="12"/>
+    <rect class="bar" x="14" y="14" width="985" height="40" />
+  </g>
+  <rect class="win" x="14" y="14" width="985" height="391" rx="12" fill="none"/>
+  <circle class="dot1" cx="32" cy="34" r="4"/>
+  <circle class="dot2" cx="46" cy="34" r="4"/>
+  <circle class="dot3" cx="60" cy="34" r="4"/>
+  <text class="title" x="506.5" y="37.5" text-anchor="middle">wxgraph · examples/demo</text>
+  <line class="rule" x1="14" y1="54" x2="999" y2="54"/>
+  <text x="36.0" y="78" xml:space="preserve" class="ln"><tspan class="prompt">$</tspan><tspan class="cmd"> wxgraph build examples/demo</tspan></text>
+  <text x="36.0" y="95" xml:space="preserve" class="ln">1 subpackage · 3 pages · 1 component · 19 wxml nodes · 57 edges <tspan class="timing">· 34ms</tspan></text>
+  <text x="36.0" y="112" xml:space="preserve" class="ln"><tspan class="dim">wrote .wxgraph/graph.json</tspan></text>
+  <text x="36.0" y="146" xml:space="preserve" class="ln"><tspan class="prompt">$</tspan><tspan class="cmd"> wxgraph impact components/price-card</tspan></text>
+  <text x="36.0" y="163" xml:space="preserve" class="ln"><tspan class="strong">components/price-card</tspan><tspan class="dim">  (component)  included by 2 hosts</tspan></text>
+  <text x="36.0" y="197" xml:space="preserve" class="ln">├─ pages/cart/index.wxml:5  &lt;price-card editing="{{editing}}" price="{{item.unitPrice}}"&gt;</text>
+  <text x="36.0" y="214" xml:space="preserve" class="ln"><tspan class="tree">│    </tspan><tspan class="data">← data editing  (pages/cart/index.js)</tspan></text>
+  <text x="36.0" y="231" xml:space="preserve" class="ln"><tspan class="tree">│    </tspan><tspan class="data">← data items[].unitPrice  (pages/cart/index.js)</tspan></text>
+  <text x="36.0" y="248" xml:space="preserve" class="ln"><tspan class="tree">│    ├─ setData({items, editing}) in onEdit  pages/cart/index.js:20  →  &lt;text&gt;  components/price-card.wxml:2  </tspan><tspan class="via">[via prop:price]</tspan></text>
+  <text x="36.0" y="265" xml:space="preserve" class="ln"><tspan class="tree">│    └─ setData({items, editing}) in onEdit  pages/cart/index.js:20  →  &lt;view&gt;  components/price-card.wxml:4  </tspan><tspan class="via">[via prop:editing]</tspan></text>
+  <text x="36.0" y="282" xml:space="preserve" class="ln">└─ pages/order/detail.wxml:4  &lt;price-card price="{{order.total}}"&gt;</text>
+  <text x="69.1" y="299" xml:space="preserve" class="ln"><tspan class="tree"></tspan><tspan class="data">← data order.total  (pages/order/detail.js)</tspan></text>
+  <text x="69.1" y="316" xml:space="preserve" class="ln"><tspan class="tree">├─ setData({order, order.no, order.total}) in onLoad  pages/order/detail.js:11  →  &lt;text&gt;  components/price-card.wxml:2  </tspan><tspan class="via">[via prop:price]</tspan></text>
+  <text x="69.1" y="333" xml:space="preserve" class="ln"><tspan class="tree">└─ setData({order.total}) in onEditPrice  pages/order/detail.js:17  →  &lt;text&gt;  components/price-card.wxml:2  </tspan><tspan class="via">[via prop:price]</tspan></text>
+  <text x="36.0" y="367" xml:space="preserve" class="ln"><tspan class="warn-line">1 unresolved_setdata site(s):</tspan></text>
+  <text x="49.2" y="384" xml:space="preserve" class="ln"><tspan class="dim">pages/cart/index.js:12 in onLoad  this.setData(&lt;non-literal&gt;)</tspan></text>
+  <rect class="cursor" x="459.7" y="374" width="5.6" height="13"/>
+</svg>
