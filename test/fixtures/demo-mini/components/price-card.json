@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "van-button": "@vant/weapp/button/index",
+    "echarts": "@echarts/mini-program/ec-canvas"
+  }
+}

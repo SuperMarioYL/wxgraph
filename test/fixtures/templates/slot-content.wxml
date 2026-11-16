@@ -1,0 +1,4 @@
+<price-card>
+  <view slot="header">{{title}}</view>
+  <text slot="footer">static</text>
+</price-card>

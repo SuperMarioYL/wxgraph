@@ -1,0 +1,6 @@
+{
+  "usingComponents": {
+    "price-card": "../../components/price-card",
+    "mp-html": "mp-html"
+  }
+}

@@ -1,0 +1,4 @@
+<view class="order">
+  <global-bar title="Order"></global-bar>
+  <price-card price="{{order.total}}"></price-card>
+</view>

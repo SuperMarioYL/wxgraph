@@ -1,0 +1,7 @@
+<view class="card {{active ? 'on' : ''}}">
+  <text>{{item.title}}</text>
+  <text>{{format(item.price)}}</text>
+  <view wx:if="{{visible && !hidden}}">shown</view>
+  <image src="{{item.cover}}" />
+  <text>{{items[i].name}}</text>
+</view>

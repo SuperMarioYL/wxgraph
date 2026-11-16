@@ -1,0 +1,5 @@
+<view class="card">
+  <view class="card__header"><slot name="header"></slot></view>
+  <view class="card__body"><slot></slot></view>
+  <slot name="footer" />
+</view>

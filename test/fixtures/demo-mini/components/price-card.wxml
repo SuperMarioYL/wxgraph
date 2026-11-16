@@ -1,0 +1,6 @@
+<view class="price-card">
+  <view class="price" bind:tap="onEdit">{{unitPrice}}</view>
+  <van-button type="primary">Add</van-button>
+  <echarts canvas-id="chart"></echarts>
+  <slot name="footer"></slot>
+</view>

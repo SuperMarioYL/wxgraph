@@ -1,0 +1,8 @@
+<view class="orders">
+  <view class="row" wx:for="{{orders}}" wx:for-item="row" wx:for-index="i" wx:key="id">
+    <text>{{row.title}}</text>
+    <view class="cell" wx:for="{{row.cells}}" wx:for-item="cell" wx:for-index="j" wx:key="*this">
+      <text>{{cell.label}}</text>
+    </view>
+  </view>
+</view>

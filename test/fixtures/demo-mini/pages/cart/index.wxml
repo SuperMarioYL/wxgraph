@@ -1,0 +1,5 @@
+<view class="cart">
+  <global-bar title="Cart"></global-bar>
+  <price-card price="{{item.unitPrice}}" bind:edit="onEdit"></price-card>
+  <mp-html content="{{description}}"></mp-html>
+</view>

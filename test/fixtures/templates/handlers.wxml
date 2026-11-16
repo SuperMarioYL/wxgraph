@@ -1,0 +1,13 @@
+<view id="host">
+  <view id="bind-short" bindtap="onBindShort">bindtap</view>
+  <view id="bind-colon" bind:tap="onBindColon">bind:tap</view>
+  <view id="catch-short" catchtap="onCatchShort">catchtap</view>
+  <view id="catch-colon" catch:tap="onCatchColon">catch:tap</view>
+  <view id="capture-bind-colon" capture-bind:tap="onCaptureBind">capture-bind:tap</view>
+  <view id="capture-bind-short" capture-bindtap="onCaptureBindShort">capture-bindtap</view>
+  <view id="capture-catch-colon" capture-catch:tap="onCaptureCatch">capture-catch:tap</view>
+  <view id="capture-catch-short" capture-catchtap="onCaptureCatchShort">capture-catchtap</view>
+  <view id="mut-bind-colon" mut-bind:tap="onMutBind">mut-bind:tap</view>
+  <view id="mut-bind-short" mut-bindtap="onMutBindShort">mut-bindtap</view>
+  <view id="longpress" bind:longpress="onLongPress">longpress</view>
+</view>

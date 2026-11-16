@@ -1,0 +1,3 @@
+<view class="mp-html">
+  <slot></slot>
+</view>
