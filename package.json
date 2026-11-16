@@ -6,7 +6,8 @@
   "author": "SuperMarioYL",
   "type": "module",
   "bin": {
-    "wxgraph": "dist/cli.js"
+    "wxgraph": "dist/cli.js",
+    "wxgraph-mcp": "dist/mcp/server.js"
   },
   "files": [
     "dist",

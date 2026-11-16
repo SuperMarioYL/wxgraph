@@ -1,0 +1,178 @@
+import { fileURLToPath } from "node:url";
+import * as path from "node:path";
+
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
+
+import { loadGraph, writeGraph } from "../graph/build";
+import { computeImpact, explain, formatImpact } from "../query/impact";
+
+const STALE_HINT = "run wxgraph build";
+
+function text(value: string): { content: Array<{ type: "text"; text: string }> } {
+  return { content: [{ type: "text", text: value }] };
+}
+
+function failure(value: string): {
+  content: Array<{ type: "text"; text: string }>;
+  isError: true;
+} {
+  return { ...text(value), isError: true };
+}
+
+/**
+ * MCP server over stdio.
+ *
+ * Every answering tool first checks the graph stamp: a stale graph would make
+ * the impact answer confidently wrong, so the only reply is the one command
+ * that fixes it.
+ */
+export function createWxgraphServer(projectDir: string): McpServer {
+  const server = new McpServer(
+    { name: "wxgraph", version: "0.1.0" },
+    {
+      instructions:
+        "Semantic graph of a WeChat mini-program. Ask wxgraph_impact before reading " +
+        "WXML/JS files to trace a change; the graph carries setData -> render edges " +
+        "with file:line provenance.",
+    },
+  );
+
+  server.registerTool(
+    "wxgraph_impact",
+    {
+      title: "What re-renders if this changes",
+      description:
+        "Blast radius of a page, component or element: which hosts include it, " +
+        "which data path feeds each property, and which setData calls re-render which " +
+        "elements. Non-literal setData sites are reported as unresolved_setdata " +
+        "instead of being guessed.",
+      inputSchema: {
+        target: z
+          .string()
+          .min(1)
+          .describe('Unit id ("components/price-card"), file path, or element id'),
+        json: z.boolean().optional().describe("Return the structured result instead of a tree"),
+      },
+    },
+    async ({ target, json }) => {
+      const loaded = await loadGraph(projectDir);
+      if (loaded.status !== "ok") return failure(STALE_HINT);
+      try {
+        const result = computeImpact(loaded.graph, target);
+        return text(json === true ? `${JSON.stringify(result, null, 2)}\n` : formatImpact(result));
+      } catch (error) {
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    "wxgraph_explain",
+    {
+      title: "Explain one edge",
+      description:
+        "Print every hop behind a setData call site or an element, including the hops " +
+        "that failed to resolve and why.",
+      inputSchema: {
+        edge: z
+          .string()
+          .min(1)
+          .describe('setData node id, "file:line" call site, or element id'),
+      },
+    },
+    async ({ edge }) => {
+      const loaded = await loadGraph(projectDir);
+      if (loaded.status !== "ok") return failure(STALE_HINT);
+      try {
+        return text(explain(loaded.graph, edge));
+      } catch (error) {
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    "wxgraph_stats",
+    {
+      title: "Graph counts and warnings",
+      description:
+        "Node/edge counts, unreadable files, unresolved components and handler " +
+        "attributes with no matching method.",
+      inputSchema: {},
+    },
+    async () => {
+      const loaded = await loadGraph(projectDir);
+      if (loaded.status !== "ok") return failure(STALE_HINT);
+      const { graph } = loaded;
+      const lines = [
+        `graph     ${loaded.graphFile}`,
+        `stamp     ${graph.stamp?.digest ?? "?"}  ${graph.stamp?.files ?? 0} source files`,
+        "",
+        `${graph.stats.subpackages} subpackages · ${graph.stats.pages} pages · ` +
+          `${graph.stats.components} components · ${graph.stats.elements} wxml nodes · ` +
+          `${graph.stats.nodes} nodes · ${graph.stats.edges} edges`,
+        `${graph.stats.binds} binds · ${graph.stats.handles} handles · ` +
+          `${graph.stats.calls_setdata} calls_setdata · ${graph.stats.rerenders} rerenders`,
+        `${graph.stats.handlers} handlers · ${graph.stats.set_data} setData sites · ` +
+          `${graph.stats.cloud_fns} cloud functions`,
+      ];
+      if (graph.warnings.length > 0) {
+        lines.push("", `${graph.warnings.length} warning(s):`);
+        for (const warning of graph.warnings) {
+          const where = warning.file === undefined ? "" : `  ${warning.file}${warning.line ? `:${warning.line}` : ""}`;
+          lines.push(`  [${warning.code}]${where}  ${warning.message}`);
+        }
+      }
+      return text(`${lines.join("\n")}\n`);
+    },
+  );
+
+  server.registerTool(
+    "wxgraph_build",
+    {
+      title: "Rebuild the graph",
+      description:
+        "Re-index the mini-program and write .wxgraph/graph.json plus a source stamp. " +
+        "Run this after editing WXML, JSON or JS.",
+      inputSchema: {},
+    },
+    async () => {
+      try {
+        const graph = await writeGraph(projectDir);
+        return text(
+          `${graph.stats.subpackages} subpackages · ${graph.stats.pages} pages · ` +
+            `${graph.stats.components} components · ${graph.stats.elements} wxml nodes · ` +
+            `${graph.stats.edges} edges\nwrote ${path.join(projectDir, ".wxgraph", "graph.json")}\n`,
+        );
+      } catch (error) {
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  return server;
+}
+
+function projectFromArgv(argv: string[]): string {
+  const flag = argv.indexOf("--project");
+  if (flag >= 0 && argv[flag + 1] !== undefined) return path.resolve(argv[flag + 1]);
+  return path.resolve(process.env.WXGRAPH_PROJECT ?? process.cwd());
+}
+
+export async function startMcpServer(projectDir = projectFromArgv(process.argv.slice(2))): Promise<void> {
+  const server = createWxgraphServer(projectDir);
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
+
+const invokedDirectly =
+  process.argv[1] !== undefined && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+
+if (invokedDirectly) {
+  startMcpServer().catch((error: unknown) => {
+    process.stderr.write(`wxgraph mcp: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 1;
+  });
+}

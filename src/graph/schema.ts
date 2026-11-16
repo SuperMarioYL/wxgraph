@@ -31,6 +31,12 @@ export interface UnitNode {
    * conventional path even when the file does not exist.
    */
   file: string;
+  /**
+   * Declared component properties, set by the script pass. Absent when the
+   * unit has no readable script or declares none; the resolver then falls back
+   * to the child's bindings instead of refusing the property hop.
+   */
+  properties?: string[];
 }
 
 export interface ElementNode {
@@ -60,6 +66,8 @@ export interface DataFieldNode {
 
 export interface HandlerNode {
   kind: "handler";
+  /** `<owner>:<name>`, the id edges point at. */
+  id: string;
   owner: string;
   name: string;
   line: number;
@@ -67,6 +75,8 @@ export interface HandlerNode {
 
 export interface SetDataNode {
   kind: "set_data";
+  /** `<owner>:<line>`, suffixed with `#n` when one line holds several calls. */
+  id: string;
   owner: string;
   /** null when the argument is not an object literal. */
   keys: string[] | null;
@@ -179,7 +189,11 @@ export interface SubpackageInfo {
   pages: string[];
 }
 
-export type WarningCode = "unresolved_component" | "invalid_json";
+export type WarningCode =
+  | "unresolved_component"
+  | "unresolved_file"
+  | "unresolved_handler"
+  | "invalid_json";
 
 export interface GraphWarning {
   code: WarningCode;
@@ -188,15 +202,33 @@ export interface GraphWarning {
   line?: number;
 }
 
+/**
+ * Hash of the sources the graph was built from. Any source edit makes the
+ * stored stamp differ from a freshly computed one, which is how the MCP server
+ * notices a stale graph.
+ */
+export interface GraphStamp {
+  /** sha256 over `path:size:mtimeMs` of every indexed source. */
+  digest: string;
+  files: number;
+  builtAt: string;
+}
+
 export interface GraphStats {
   subpackages: number;
   pages: number;
   components: number;
   elements: number;
+  data_fields: number;
+  handlers: number;
+  set_data: number;
+  cloud_fns: number;
   nodes: number;
   edges: number;
   binds: number;
   handles: number;
+  calls_setdata: number;
+  rerenders: number;
 }
 
 export interface Graph {
@@ -206,9 +238,20 @@ export interface Graph {
   edges: GraphEdge[];
   warnings: GraphWarning[];
   stats: GraphStats;
+  stamp?: GraphStamp;
 }
 
 /** Target id used by `in_subpackage` edges. */
 export function subpackageId(root: string): string {
   return `subpackage:${root}`;
+}
+
+/** Node id of a handler method. */
+export function handlerId(owner: string, name: string): string {
+  return `${owner}:${name}`;
+}
+
+/** Node id of a `setData` call site; `ordinal` disambiguates same-line calls. */
+export function setDataId(owner: string, line: number, ordinal: number): string {
+  return ordinal <= 1 ? `${owner}:${line}` : `${owner}:${line}#${ordinal}`;
 }

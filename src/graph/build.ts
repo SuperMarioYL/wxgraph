@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import fg from "fast-glob";
 
@@ -13,12 +14,17 @@ import {
   type FileManifest,
   type ResolvedSpecifier,
 } from "../parse/manifest";
+import { parseScript } from "../parse/script";
 import { parseWxml, type ParsedWxml } from "../parse/wxml";
+import { resolveGraph } from "./resolve";
 import {
   subpackageId,
+  type CloudFnNode,
+  type DataFieldNode,
   type Graph,
   type GraphEdge,
   type GraphNode,
+  type GraphStamp,
   type GraphWarning,
   type UnitNode,
 } from "./schema";
@@ -30,6 +36,8 @@ const IGNORED_GLOBS = [
   "**/.wxgraph/**",
   "**/dist/**",
 ];
+
+const STAMP_GLOBS = "**/*.{json,wxml,js}";
 
 interface UnitState {
   unit: UnitNode;
@@ -115,9 +123,8 @@ function nodeId(node: GraphNode): string {
     case "data_field":
       return `${node.owner}:${node.path}`;
     case "handler":
-      return `${node.owner}:${node.name}:${node.line}`;
     case "set_data":
-      return `${node.owner}:${node.line}`;
+      return node.id;
     case "cloud_fn":
       return node.name;
     default:
@@ -143,9 +150,51 @@ function sortWarnings(warnings: GraphWarning[]): GraphWarning[] {
   });
 }
 
+function countKind(nodes: GraphNode[], kind: GraphNode["kind"]): number {
+  return nodes.filter((node) => node.kind === kind).length;
+}
+
+function countRel(edges: GraphEdge[], rel: GraphEdge["rel"]): number {
+  return edges.filter((edge) => edge.rel === rel).length;
+}
+
 /**
- * Build the m1 graph for a native mini-program:
- * app.json + per-file JSON + every declared unit's `.wxml`.
+ * Digest of the sources the graph is built from. `loadGraph` recomputes it, so
+ * a stale graph is detectable without trusting timestamps already in the file.
+ */
+export async function computeSourceStamp(projectDirInput: string): Promise<GraphStamp> {
+  const projectDir = path.resolve(projectDirInput);
+  const files = (
+    await fg(STAMP_GLOBS, {
+      cwd: projectDir,
+      ignore: IGNORED_GLOBS,
+      onlyFiles: true,
+      dot: false,
+    })
+  )
+    .map(toPosix)
+    .sort();
+
+  const entries: string[] = [];
+  for (const file of files) {
+    try {
+      const stats = await stat(path.join(projectDir, file));
+      entries.push(`${file}:${stats.size}:${Math.trunc(stats.mtimeMs)}`);
+    } catch {
+      entries.push(`${file}:missing`);
+    }
+  }
+
+  return {
+    digest: createHash("sha256").update(entries.join("\n")).digest("hex").slice(0, 16),
+    files: files.length,
+    builtAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Build the m1 + m2 + m3 graph for a native mini-program:
+ * app.json + per-file JSON + every unit's `.wxml` and `.js`.
  */
 export async function buildGraph(projectDirInput: string): Promise<Graph> {
   const projectDir = path.resolve(projectDirInput);
@@ -273,12 +322,14 @@ export async function buildGraph(projectDirInput: string): Promise<Graph> {
 
   const edges: GraphEdge[] = [];
   const nodes: GraphNode[] = [...units.values()];
+  const elementHost = new Map<string, string>();
 
   for (const state of states.values()) {
     const parsed = parsedByUnit.get(state.unit.id);
     if (parsed !== undefined) {
       const firstUsage = new Map<string, { file: string; line: number }>();
       for (const element of parsed.elements) {
+        elementHost.set(element.id, element.host);
         if (!firstUsage.has(element.tag)) {
           firstUsage.set(element.tag, { file: element.file, line: element.line });
         }
@@ -304,6 +355,84 @@ export async function buildGraph(projectDirInput: string): Promise<Graph> {
     }
   }
 
+  // m2: link page/component scripts to the nodes above.
+  const scriptHandlerNames = new Map<string, Set<string>>();
+  const cloudNodes = new Map<string, CloudFnNode>();
+  const jsFiles = await fg("**/*.js", {
+    cwd: projectDir,
+    ignore: IGNORED_GLOBS,
+    onlyFiles: true,
+    dot: false,
+  });
+
+  for (const relative of jsFiles.map(toPosix).sort()) {
+    const ownerId = relative.replace(/\.js$/, "");
+    if (!units.has(ownerId)) continue;
+    const source = await readOptionalFile(projectDir, relative);
+    if (source === null) continue;
+
+    const parsed = parseScript(source, { file: relative, owner: ownerId });
+    if (!parsed.ok) {
+      warnings.push({ code: "unresolved_file", message: parsed.error, file: relative });
+      continue;
+    }
+
+    const script = parsed.script;
+    // Only a readable Page/Component object makes the method set authoritative.
+    if (script.rootKind !== null) {
+      scriptHandlerNames.set(ownerId, new Set(script.handlers.map((handler) => handler.name)));
+    }
+    if (script.propertyNames.length > 0) {
+      const unit = units.get(ownerId);
+      if (unit !== undefined) unit.properties = [...script.propertyNames].sort();
+    }
+    nodes.push(...script.handlers, ...script.setDataNodes);
+
+    for (const site of script.setDataSites) {
+      edges.push({
+        rel: "calls_setdata",
+        handler: site.handler?.id ?? ownerId,
+        call: site.node.id,
+        file: relative,
+        line: site.node.line,
+      });
+    }
+
+    for (const call of script.cloudCalls) {
+      if (!cloudNodes.has(call.name)) {
+        const node: CloudFnNode = { kind: "cloud_fn", name: call.name };
+        cloudNodes.set(call.name, node);
+        nodes.push(node);
+      }
+      edges.push({
+        rel: "invokes",
+        from: call.handler?.id ?? ownerId,
+        to: call.name,
+        file: relative,
+        line: call.line,
+      });
+    }
+  }
+
+  // A handler attribute without a matching method is a warning, never an
+  // edge. When a unit ships no readable script the method set is unknown, so
+  // silence is the honest answer.
+  for (const edge of edges) {
+    if (edge.rel !== "handles") continue;
+    const host = elementHost.get(edge.element);
+    if (host === undefined) continue;
+    const defined = scriptHandlerNames.get(host);
+    if (defined === undefined || defined.has(edge.handler)) continue;
+    warnings.push({
+      code: "unresolved_handler",
+      message:
+        `handler "${edge.handler}" is bound at ${edge.file}:${edge.line} ` +
+        `but ${host}.js defines no method of that name`,
+      file: edge.file,
+      line: edge.line,
+    });
+  }
+
   for (const subpackage of app.subpackages) {
     for (const unit of units.values()) {
       if (!unit.id.startsWith(`${subpackage.root}/`)) continue;
@@ -320,6 +449,29 @@ export async function buildGraph(projectDirInput: string): Promise<Graph> {
 
   const uniqueEdges = new Map<string, GraphEdge>();
   for (const edge of edges) {
+    const key = edgeKey(edge);
+    if (!uniqueEdges.has(key)) uniqueEdges.set(key, edge);
+  }
+
+  // m3: resolve data paths and close the owned rerenders edge.
+  const resolution = resolveGraph({ nodes, edges: [...uniqueEdges.values()] });
+
+  const dataFields = new Map<string, DataFieldNode>();
+  for (const unit of resolution.units.values()) {
+    for (const binding of unit.bindings) {
+      const key = `${unit.node.id}:${binding.path}`;
+      if (!dataFields.has(key)) {
+        dataFields.set(key, {
+          kind: "data_field",
+          owner: unit.node.id,
+          path: binding.path,
+        });
+      }
+    }
+  }
+  nodes.push(...dataFields.values());
+
+  for (const edge of resolution.rerenders) {
     const key = edgeKey(edge);
     if (!uniqueEdges.has(key)) uniqueEdges.set(key, edge);
   }
@@ -346,14 +498,21 @@ export async function buildGraph(projectDirInput: string): Promise<Graph> {
     warnings: sortedWarnings,
     stats: {
       subpackages: app.subpackages.length,
-      pages: sortedNodes.filter((node) => node.kind === "page").length,
-      components: sortedNodes.filter((node) => node.kind === "component").length,
-      elements: sortedNodes.filter((node) => node.kind === "element").length,
+      pages: countKind(sortedNodes, "page"),
+      components: countKind(sortedNodes, "component"),
+      elements: countKind(sortedNodes, "element"),
+      data_fields: countKind(sortedNodes, "data_field"),
+      handlers: countKind(sortedNodes, "handler"),
+      set_data: countKind(sortedNodes, "set_data"),
+      cloud_fns: countKind(sortedNodes, "cloud_fn"),
       nodes: sortedNodes.length,
       edges: sortedEdges.length,
-      binds: sortedEdges.filter((edge) => edge.rel === "binds").length,
-      handles: sortedEdges.filter((edge) => edge.rel === "handles").length,
+      binds: countRel(sortedEdges, "binds"),
+      handles: countRel(sortedEdges, "handles"),
+      calls_setdata: countRel(sortedEdges, "calls_setdata"),
+      rerenders: countRel(sortedEdges, "rerenders"),
     },
+    stamp: await computeSourceStamp(projectDir),
   };
 
   return graph;
@@ -368,4 +527,48 @@ export async function writeGraph(
   await mkdir(path.dirname(outFile), { recursive: true });
   await writeFile(outFile, `${JSON.stringify(graph, null, 2)}\n`, "utf8");
   return graph;
+}
+
+export type GraphLoad =
+  | { status: "ok"; graph: Graph; graphFile: string }
+  | { status: "missing"; graphFile: string }
+  | { status: "stale"; graphFile: string; reason: string };
+
+/**
+ * Read `.wxgraph/graph.json` and compare its stamp with the sources on disk.
+ * A missing, unreadable or stale graph must never be answered from.
+ */
+export async function loadGraph(
+  projectDirInput: string,
+  graphFile = path.join(projectDirInput, ".wxgraph", "graph.json"),
+): Promise<GraphLoad> {
+  const projectDir = path.resolve(projectDirInput);
+  let source: string;
+  try {
+    source = await readFile(graphFile, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return { status: "missing", graphFile };
+    }
+    return { status: "stale", graphFile, reason: "graph.json is not readable" };
+  }
+
+  let graph: Graph;
+  try {
+    graph = JSON.parse(source) as Graph;
+  } catch {
+    return { status: "stale", graphFile, reason: "graph.json is not valid JSON" };
+  }
+  if (graph === null || typeof graph !== "object" || !Array.isArray(graph.nodes)) {
+    return { status: "stale", graphFile, reason: "graph.json does not look like a graph" };
+  }
+  if (graph.stamp === undefined) {
+    return { status: "stale", graphFile, reason: "graph.json has no source stamp" };
+  }
+
+  const current = await computeSourceStamp(projectDir);
+  if (current.digest !== graph.stamp.digest) {
+    return { status: "stale", graphFile, reason: "sources changed since the last build" };
+  }
+  return { status: "ok", graph, graphFile };
 }
