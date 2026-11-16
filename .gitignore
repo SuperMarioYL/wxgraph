@@ -30,3 +30,4 @@ BUILD_SETUP_NEXT_STEPS.md
 PUBLISH_BLOCKED.md
 .spawn.*
 .stage_*
+.verify_report.yaml
