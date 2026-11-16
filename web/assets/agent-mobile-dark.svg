@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 760" width="640" height="760" role="img" aria-labelledby="agent-mobile-dark-t agent-mobile-dark-d" data-palette="56bde6-6a81e7-acf6f0-0b4d974338e6">
+<title id="agent-mobile-dark-t">wxgraph surfaces, narrow (dark)</title><desc id="agent-mobile-dark-d">The CLI, MCP tools and Skill stacked around one local graph for a phone-width viewport.</desc>
+<defs>
+<linearGradient id="agent-mobile-dark-neon" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="640" y2="760"><stop stop-color="#56bde6"/><stop offset=".55" stop-color="#6a81e7"/><stop offset="1" stop-color="#acf6f0"/></linearGradient>
+<radialGradient id="agent-mobile-dark-haze"><stop stop-color="#56bde6" stop-opacity=".16"/><stop offset="1" stop-color="#050a12" stop-opacity="0"/></radialGradient>
+<marker id="agent-mobile-dark-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="m1 1 7 4-7 4" fill="none" stroke="#6a81e7" stroke-width="1.5"/></marker>
+</defs><style>
+text{font-family:-apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;fill:#eefdfc}
+.mono{font-family:ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace}
+.muted{fill:#95b1c4}
+.title{font-weight:700;letter-spacing:-.4px}
+.kicker{font-weight:700;letter-spacing:2px;fill:#95b1c4}
+.panel{fill:#0c151f;stroke:#173141;stroke-width:1.2}
+.key{fill:#0c151f;stroke:#56bde6;stroke-width:1.6}
+.dashed{fill:#0c151f;stroke:#95b1c4;stroke-width:1.1;stroke-dasharray:6 5}
+.chip{fill:#0a141d;stroke:#173141;stroke-width:1}
+.wire{fill:none;stroke:#173141;stroke-width:1.5}
+.flow{fill:none;stroke:#56bde6;stroke-width:1.8;stroke-dasharray:7 10;animation:dash 2.8s linear infinite}
+.primary{fill:#56bde6}
+.secondary{fill:#6a81e7}
+.highlight{fill:#acf6f0}
+.pulse{animation:breathe 4s ease-in-out infinite}
+@keyframes dash{to{stroke-dashoffset:-34}}
+@keyframes breathe{0%,100%{opacity:.32}50%{opacity:.95}}
+@media (prefers-reduced-motion:reduce){.flow,.pulse{animation:none!important}.flow{stroke-dasharray:none}}</style>
+<rect width="640" height="760" fill="#050a12"/>
+
+<line x1="32" y1="0" x2="32" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="64" y1="0" x2="64" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="96" y1="0" x2="96" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="128" y1="0" x2="128" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="160" y1="0" x2="160" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="192" y1="0" x2="192" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="224" y1="0" x2="224" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="256" y1="0" x2="256" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="288" y1="0" x2="288" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="320" y1="0" x2="320" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="352" y1="0" x2="352" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="384" y1="0" x2="384" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="416" y1="0" x2="416" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="448" y1="0" x2="448" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="480" y1="0" x2="480" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="512" y1="0" x2="512" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="544" y1="0" x2="544" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="576" y1="0" x2="576" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="608" y1="0" x2="608" y2="760" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="32" x2="640" y2="32" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="64" x2="640" y2="64" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="96" x2="640" y2="96" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="128" x2="640" y2="128" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="160" x2="640" y2="160" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="192" x2="640" y2="192" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="224" x2="640" y2="224" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="256" x2="640" y2="256" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="288" x2="640" y2="288" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="320" x2="640" y2="320" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="352" x2="640" y2="352" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="384" x2="640" y2="384" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="416" x2="640" y2="416" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="448" x2="640" y2="448" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="480" x2="640" y2="480" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="512" x2="640" y2="512" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="544" x2="640" y2="544" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="576" x2="640" y2="576" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="608" x2="640" y2="608" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="640" x2="640" y2="640" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="672" x2="640" y2="672" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="704" x2="640" y2="704" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/><line x1="0" y1="736" x2="640" y2="736" stroke="#173141" stroke-opacity=".2" stroke-width=".6"/>
+<text x="36" y="42" font-size="11" class="kicker">INTEGRATION</text>
+<text x="36" y="78" font-size="23" class="title">Three surfaces,</text>
+<text x="36" y="106" font-size="23" class="title">one local graph</text>
+<text x="36" y="132" font-size="11.5" class="muted">No daemon · no network call · no database</text>
+
+<rect class="key" x="36" y="154" width="568" height="112" rx="12"/>
+<text x="52" y="180" font-size="10.5" class="kicker">THE GRAPH</text>
+<text x="52" y="208" font-size="15" class="mono">graph.json</text>
+<text x="52" y="232" font-size="11.5" class="muted">6 node kinds · 8 edge kinds · rerenders with file:line</text>
+<text x="52" y="252" font-size="11" class="muted">one JSON file plus a source stamp</text>
+
+<path class="wire" d="M320 266 V296"/><path class="flow" d="M320 268 V292" marker-end="url(#agent-mobile-dark-arrow)"/>
+
+<rect class="panel" x="36" y="296" width="568" height="104" rx="12"/>
+<text x="52" y="322" font-size="10.5" class="kicker">CLI</text>
+<text x="52" y="350" font-size="13" class="mono">6 commands</text>
+<text x="52" y="372" font-size="10.5" class="mono">build · impact · explain · search · stats · init</text>
+<text x="52" y="390" font-size="10.5" class="muted">--json for machines · -C for another project</text>
+
+<path class="wire" d="M320 400 V430"/><path class="flow" d="M320 402 V426" marker-end="url(#agent-mobile-dark-arrow)"/>
+
+<rect class="panel" x="36" y="430" width="568" height="104" rx="12"/>
+<text x="52" y="456" font-size="10.5" class="kicker">MCP OVER STDIO</text>
+<text x="52" y="484" font-size="13" class="mono">5 tools</text>
+<text x="52" y="506" font-size="10.5" class="mono">wxgraph_impact · wxgraph_explain · wxgraph_search · wxgraph_stats · wxgraph_build</text>
+<text x="52" y="524" font-size="10.5" class="muted">stale graph → run wxgraph build</text>
+
+<path class="wire" d="M320 534 V564"/><path class="flow" d="M320 536 V560" marker-end="url(#agent-mobile-dark-arrow)"/>
+
+<rect class="panel" x="36" y="564" width="568" height="104" rx="12"/>
+<text x="52" y="590" font-size="10.5" class="kicker">SKILL</text>
+<text x="52" y="618" font-size="13" class="mono">/wxgraph</text>
+<text x="52" y="640" font-size="10.5" class="muted">query the graph for render impact across files</text>
+<text x="52" y="658" font-size="10.5" class="muted">read a file for local questions</text>
+
+<text x="36" y="704" font-size="11" class="muted">Local only: no hosted service · no account · no telemetry.</text>
+<text x="36" y="728" font-size="11" class="muted">Queries refuse a stale source stamp.</text>
+</svg>

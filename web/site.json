@@ -1,0 +1,431 @@
+{
+  "schema": 3,
+  "name": "wxgraph",
+  "github": "https://github.com/SuperMarioYL/wxgraph",
+  "lang": {
+    "primary": "en",
+    "toggle": true
+  },
+  "palette": "auto",
+  "hero": {
+    "eyebrow": {
+      "en": "Render-impact graph for native WeChat mini-programs · local CLI · MCP over stdio",
+      "zh": "原生微信小程序的渲染影响图 · 本地 CLI · stdio MCP"
+    },
+    "headline": {
+      "en": "Change one component.\nTrace every page it can re-render.",
+      "zh": "改一个组件。\n看清哪些页面重渲染。"
+    },
+    "sub": {
+      "en": "Generic code graphs index a mini-program's JSON and JS but miss the WXML edges that explain a render. wxgraph parses the manifest, templates and scripts into one local graph and answers which pages a component change re-renders — resolved edges only, every hop carrying file:line.",
+      "zh": "通用代码图只索引小程序的 JSON 和 JS，漏掉了解释渲染的 WXML 边。wxgraph 把 manifest、模板和脚本解析成一张本地图，回答一次组件改动会重新渲染哪些页面——只输出已解析的边，每一跳都带 file:line。"
+    },
+    "href": "#quickstart",
+    "command": "node dist/cli.js impact components/price-card",
+    "cta": {
+      "en": "Run the quickstart",
+      "zh": "查看快速开始"
+    },
+    "ctaGithub": {
+      "en": "View on GitHub",
+      "zh": "在 GitHub 查看"
+    }
+  },
+  "advantages": [
+    {
+      "title": {
+        "en": "WXML is a first-class layer, not loose JSON",
+        "zh": "WXML 是一等公民，不是零散 JSON"
+      },
+      "body": {
+        "en": "The graph reads app.json (pages, tabBar, subpackages and subPackages), every WXML template (elements, wx:for aliases, both bind/catch spellings, text and attribute bindings) and the component registry from usingComponents in all three specifier forms: root-absolute, relative and npm. Six node kinds and eight edge kinds cover the model; the owned edge is rerenders.",
+        "zh": "图会解析 app.json（pages、tabBar、subpackages 与 subPackages）、每个 WXML 模板（节点、wx:for 别名、bind/catch 两种写法、文本与属性绑定），以及 usingComponents 里三种路径写法的组件注册表：根路径、相对路径和 npm 包名。六种节点、八种边构成模型，核心边是 rerenders。"
+      },
+      "chips": [
+        "› 6 node kinds",
+        "› 8 edge kinds"
+      ]
+    },
+    {
+      "title": {
+        "en": "Resolved edges only — misses are printed",
+        "zh": "只输出已解析的边，缺失会打印"
+      },
+      "body": {
+        "en": "An edge exists only when every hop resolves. A non-literal this.setData(patch) is recorded as unresolved_setdata with its call site; a property hop that fails is listed under unresolved hop(s) as no_binding, unknown_property or no_child_binding. The graph never fills the gap with a guess, and a stale graph is refused with one line instead of answered from old sources.",
+        "zh": "只有每一跳都解析成功才会产出边。非字面量的 this.setData(patch) 会记录为 unresolved_setdata 并带上调用点；属性跳转失败会以 no_binding、unknown_property 或 no_child_binding 列在 unresolved hop(s) 下。图不会用猜测补缺口；源码变化后，过期图只会回一行拒绝，而不会拿旧源码作答。"
+      },
+      "chips": [
+        "› file:line provenance",
+        "› stale graph refused"
+      ]
+    },
+    {
+      "title": {
+        "en": "One graph, three agent surfaces",
+        "zh": "一张图，三种 agent 入口"
+      },
+      "body": {
+        "en": "The same graph answers the CLI (build, impact with --up/--json/-C, explain, search, stats, init), an MCP server over stdio with five tools, and a /wxgraph Skill that tells an agent to query the graph before reading templates one by one. Everything runs locally: no hosted service, no account, no telemetry.",
+        "zh": "同一张图服务三种入口：CLI（build、带 --up/--json/-C 的 impact、explain、search、stats、init）、基于 stdio 的 MCP server（五个工具），以及一个 /wxgraph Skill——它让 agent 在逐个读模板之前先查图。所有东西都在本地运行：没有托管服务、没有账号、没有遥测。"
+      },
+      "chips": [
+        "› CLI",
+        "› MCP stdio",
+        "› /wxgraph Skill"
+      ]
+    }
+  ],
+  "demo": {
+    "title": {
+      "en": "Verified run records",
+      "zh": "已验证的运行记录"
+    },
+    "note": {
+      "en": "The commands and outputs below are copied verbatim from docs/demo-results.json, recorded 2026-11-17 with Node v22.23.1 on darwin arm64. The input is the synthetic mini-program shipped at examples/demo: every count and file:line describes that fixture only, not a user project. Build time is wall-clock on the recording machine; the source stamp changes on a fresh checkout even when the graph content is identical. The full record, including the --json structured result, lives in that file.",
+      "zh": "下面的命令与输出逐字取自 docs/demo-results.json，记录于 2026-11-17，Node v22.23.1，darwin arm64。输入是仓库自带的合成小程序 examples/demo：所有计数和 file:line 只描述这个 fixture，不代表任何用户项目。构建耗时是录制机器的墙钟时间；源码戳在全新检出时会变化，即使图内容相同。完整记录（包括 --json 的结构化结果）就在那个文件里。"
+    },
+    "source": "https://github.com/SuperMarioYL/wxgraph/blob/main/docs/demo-results.json",
+    "steps": [
+      {
+        "label": {
+          "en": "Index the demo",
+          "zh": "建立索引"
+        },
+        "body": {
+          "en": "build walks app.json, every JSON, WXML and JS file, resolves the manifest, component registry, bindings, handlers and setData keys, then writes .wxgraph/graph.json with a source stamp. Four .js files are seen and parsed; no .js file is left unresolved.",
+          "zh": "build 遍历 app.json、每个 JSON、WXML 与 JS 文件，解析 manifest、组件注册表、绑定、handler 和 setData 的 key，然后写出带源码戳的 .wxgraph/graph.json。四个 .js 文件全部被看到并解析，没有未解析的 .js。"
+        },
+        "image": "/assets/demo-build-light.svg",
+        "imageDark": "/assets/demo-build-dark.svg",
+        "command": "node dist/cli.js build examples/demo",
+        "output": "1 subpackage · 3 pages · 1 component · 19 wxml nodes · 57 edges · 35ms\nwrote examples/demo/.wxgraph/graph.json"
+      },
+      {
+        "label": {
+          "en": "Blast radius",
+          "zh": "影响面"
+        },
+        "body": {
+          "en": "impact prints the two host templates that include the component, the page data path feeding each property, and the four resolved re-renders. It also prints the one setData site the graph cannot enumerate: onLoad passes a non-literal object.",
+          "zh": "impact 打印两个引入该组件的宿主模板、喂给每个属性的页面数据路径，以及四条已解析的重新渲染。它也会打印图无法枚举的那个 setData 调用点：onLoad 传入了非字面量对象。"
+        },
+        "image": "/assets/demo-impact-light.svg",
+        "imageDark": "/assets/demo-impact-dark.svg",
+        "command": "node dist/cli.js impact components/price-card",
+        "output": "components/price-card  (component)  included by 2 hosts\n\n├─ pages/cart/index.wxml:5  <price-card editing=\"{{editing}}\" price=\"{{item.unitPrice}}\">\n│    ← data editing  (pages/cart/index.js)\n│    ← data items[].unitPrice  (pages/cart/index.js)\n│    ├─ setData({items, editing}) in onEdit  pages/cart/index.js:20  →  <text>  components/price-card.wxml:2  [via prop:price]\n│    └─ setData({items, editing}) in onEdit  pages/cart/index.js:20  →  <view>  components/price-card.wxml:4  [via prop:editing]\n└─ pages/order/detail.wxml:4  <price-card price=\"{{order.total}}\">\n     ← data order.total  (pages/order/detail.js)\n     ├─ setData({order, order.no, order.total}) in onLoad  pages/order/detail.js:11  →  <text>  components/price-card.wxml:2  [via prop:price]\n     └─ setData({order.total}) in onEditPrice  pages/order/detail.js:17  →  <text>  components/price-card.wxml:2  [via prop:price]\n\n1 unresolved_setdata site(s):\n  pages/cart/index.js:12 in onLoad  this.setData(<non-literal>)"
+      },
+      {
+        "label": {
+          "en": "Walk upstream",
+          "zh": "反向遍历"
+        },
+        "body": {
+          "en": "impact --up follows the includes edges in the other direction: two direct host pages, one level up, each with the template and line that includes the component. This is the caller walk an agent needs before deleting or renaming a shared component.",
+          "zh": "impact --up 沿 includes 边反方向走：两个直接宿主页面，向上走一层，每个都带引入该组件的模板与行号。删除或重命名共享组件之前，agent 需要的就是这次调用方遍历。"
+        },
+        "image": "/assets/demo-up-light.svg",
+        "imageDark": "/assets/demo-up-dark.svg",
+        "command": "node dist/cli.js impact components/price-card --up",
+        "output": "components/price-card  (component)\n\nreached from 2 unit(s): 2 direct host(s), 1 level(s) up\n\n├─ pages/cart/index  (page)  via <price-card>  pages/cart/index.wxml:5\n└─ pages/order/detail  (page)  via <price-card>  pages/order/detail.wxml:4"
+      },
+      {
+        "label": {
+          "en": "Audit the parse",
+          "zh": "核对解析覆盖"
+        },
+        "body": {
+          "en": "stats prints graph counts, edge-kind totals, handler and setData totals, and the script coverage line. The last line is the honesty check: four .js files seen, four parsed, zero unresolved, zero .ts files not analysed.",
+          "zh": "stats 打印图计数、按边种类的总数、handler 与 setData 总数，以及脚本覆盖行。最后一行是诚实性检查：看到四个 .js 文件，解析四个，零个未解析，零个未分析的 .ts 文件。"
+        },
+        "image": "/assets/demo-stats-light.svg",
+        "imageDark": "/assets/demo-stats-dark.svg",
+        "command": "node dist/cli.js stats",
+        "output": "graph     examples/demo/.wxgraph/graph.json\nstamp     15a707d39d01629d  14 source files\n\n1 subpackage · 3 pages · 1 component · 19 wxml nodes · 57 edges\n11 binds · 7 handles · 6 calls_setdata · 10 rerenders\n9 handlers · 6 setData sites · 1 cloud function\nscripts   4 .js files seen · 4 parsed · 0 unresolved · 0 .ts files not analysed"
+      },
+      {
+        "label": {
+          "en": "Open one hop",
+          "zh": "拆开一条跳转"
+        },
+        "body": {
+          "en": "explain opens pages/cart/index.js:20 and prints every hop behind the onEdit setData: which data path reaches which element, which two hops are direct, and which two cross the price-card property boundary.",
+          "zh": "explain 打开 pages/cart/index.js:20，打印 onEdit 这次 setData 背后的每一跳：哪条数据路径到达哪个节点、哪两条是 direct、哪两条穿过 price-card 的属性边界。"
+        },
+        "image": "/assets/demo-explain-light.svg",
+        "imageDark": "/assets/demo-explain-dark.svg",
+        "command": "node dist/cli.js explain pages/cart/index.js:20",
+        "output": "setData site  pages/cart/index.js:20  (owner pages/cart/index)\nhandler  onEdit  pages/cart/index.js:15\nkeys     items, editing\n\n  \"items\"  resolved [direct]  \"items\" -> items -> <view> pages/cart/index.wxml:4\n  \"items\"  resolved [prop:price]  \"items\" -> items[].unitPrice -> <price-card price> -> <text> price components/price-card.wxml:2\n  \"items\"  resolved [direct]  \"items\" -> items.length -> <view> pages/cart/index.wxml:8\n  \"editing\"  resolved [prop:editing]  \"editing\" -> editing -> <price-card editing> -> <view> editing components/price-card.wxml:4"
+      }
+    ]
+  },
+  "quickstart": {
+    "title": {
+      "en": "Quickstart",
+      "zh": "快速开始"
+    },
+    "body": {
+      "en": "Node 22 or newer. The repository ships a synthetic mini-program at examples/demo, so the first graph is a short build away. Run the built CLI from the checkout, or put both binaries on PATH with npm link.",
+      "zh": "需要 Node 22 或更新版本。仓库自带一个合成小程序 examples/demo，构建之后几步就能拿到第一张图。从检出目录直接运行构建后的 CLI，或用 npm link 把两个二进制放进 PATH。"
+    },
+    "steps": [
+      {
+        "title": {
+          "en": "Clone, install, build",
+          "zh": "克隆、安装、构建"
+        },
+        "code": "git clone https://github.com/SuperMarioYL/wxgraph.git\ncd wxgraph\nnpm ci\nnpm run build"
+      },
+      {
+        "title": {
+          "en": "Index the shipped demo",
+          "zh": "为自带示例建立索引"
+        },
+        "code": "node dist/cli.js build examples/demo"
+      },
+      {
+        "title": {
+          "en": "Ask what re-renders",
+          "zh": "询问谁会重新渲染"
+        },
+        "code": "node dist/cli.js impact components/price-card"
+      },
+      {
+        "title": {
+          "en": "Inspect one setData site",
+          "zh": "拆开一个 setData 调用点"
+        },
+        "code": "node dist/cli.js explain pages/cart/index.js:20"
+      },
+      {
+        "title": {
+          "en": "Search before you know the id",
+          "zh": "还不知道 id 时先搜索"
+        },
+        "code": "node dist/cli.js search price-card"
+      },
+      {
+        "title": {
+          "en": "Index your own mini-program",
+          "zh": "为自己的小程序建立索引"
+        },
+        "code": "node dist/cli.js init /absolute/path/to/miniprogram\nnode dist/cli.js build /absolute/path/to/miniprogram\nnode dist/cli.js impact components/price-card"
+      },
+      {
+        "title": {
+          "en": "Put the binaries on PATH",
+          "zh": "把二进制放进 PATH"
+        },
+        "code": "npm link\nwxgraph impact components/price-card\nwxgraph-mcp --project /absolute/path/to/miniprogram"
+      }
+    ]
+  },
+  "limitations": [
+    {
+      "en": "The recorded counts describe the synthetic examples/demo fixture, not a measurement of any real project. Build time is wall-clock on the recording machine; counts and file:line values are stable only for that demo.",
+      "zh": "录制的计数只描述合成的 examples/demo fixture，不是对任何真实项目的测量。构建耗时是录制机器的墙钟时间；计数与 file:line 只对这个 demo 稳定。"
+    },
+    {
+      "en": "Native .wxml projects only. Taro, uni-app and kbone compiled output are not analysed.",
+      "zh": "只支持原生 .wxml 项目。Taro、uni-app 和 kbone 编译产物不在分析范围内。"
+    },
+    {
+      "en": "Only .js sources are parsed. .ts files are counted and warned as unsupported_ts, not analysed.",
+      "zh": "只解析 .js 源码。.ts 文件会被计数并以 unsupported_ts 警告，但不做分析。"
+    },
+    {
+      "en": "WXSS and styling are out of scope: the graph has no stylesheet edges.",
+      "zh": "WXSS 与样式不在范围内：图里没有样式表边。"
+    },
+    {
+      "en": "Cloud-function bodies are not parsed; only wx.cloud.callFunction call sites are recorded.",
+      "zh": "云函数函数体不解析；只记录 wx.cloud.callFunction 的调用点。"
+    },
+    {
+      "en": "WXML expressions yield data paths, not evaluated values. Ternaries and method calls are not computed.",
+      "zh": "WXML 表达式只产出数据路径，不求值。三元表达式和方法调用不会被计算。"
+    },
+    {
+      "en": "A resolved edge is a structural path, not proof of a runtime render: a wx:if guard can still be false. The platform decides whether the element renders.",
+      "zh": "已解析的边是结构路径，不等于运行时一定渲染：wx:if 守卫仍可能为假，最终是否渲染由平台决定。"
+    },
+    {
+      "en": "No watch mode or incremental reindex. Re-run wxgraph build after editing WXML, JSON or JS; queries refuse a graph whose source stamp is stale.",
+      "zh": "没有 watch 模式或增量索引。改完 WXML、JSON 或 JS 后要重新运行 wxgraph build；源码戳过期的图会被查询拒绝。"
+    },
+    {
+      "en": "v0.1 has no hosted service, web UI, accounts or telemetry. It is a local CLI and a local MCP server over stdio.",
+      "zh": "v0.1 没有托管服务、Web UI、账号或遥测。它是一个本地 CLI，以及一个基于 stdio 的本地 MCP server。"
+    }
+  ],
+  "scene": {
+    "kind": "neon-graph",
+    "fallback": "/assets/scene-dark.svg",
+    "fallbackLight": "/assets/scene-light.svg",
+    "caption": {
+      "en": "Illustrative scene: one setData site reaches a data path, crosses a component property and lands on a WXML element. Exact counts belong to the recorded demo below.",
+      "zh": "示意场景：一个 setData 调用点经过数据路径，穿过组件属性，落到一个 WXML 节点。确切计数以下方录制演示为准。"
+    }
+  },
+  "story": {
+    "intro": {
+      "title": {
+        "en": "A component change is\na cross-file question",
+        "zh": "一次组件改动，\n是一个跨文件的问题"
+      },
+      "body": {
+        "en": "In a native mini-program the render path is split across four file kinds: app.json routes pages and subpackages, a page JSON registers components, a WXML template binds an attribute to a data path, and a JS handler calls setData. A generic code graph indexes the JSON and JS and still cannot say which pages a component change re-renders. wxgraph adds the WXML grammar, resolves the hops and emits only edges that hold. When a hop fails, it says which one.",
+        "zh": "在原生小程序里，渲染路径分散在四类文件中：app.json 决定页面与分包，页面 JSON 注册组件，WXML 模板把属性绑定到数据路径，JS handler 调用 setData。通用代码图会索引 JSON 和 JS，却仍然答不出一次组件改动会重新渲染哪些页面。wxgraph 补上 WXML 语法，解析这些跳转，只输出真正成立的边；哪一跳失败，就报哪一跳。"
+      }
+    },
+    "sections": [
+      {
+        "title": {
+          "en": "From manifest to a resolved graph",
+          "zh": "从 manifest 到一张已解析的图"
+        },
+        "body": {
+          "en": "build reads app.json and every *.json for pages, tabBar entries, subpackage roots and independent flags; parses WXML for elements, bindings, wx:for scope and event attributes; then parses every .js with acorn, ES module first with a classic-script retry, and attaches handlers, setData call sites and cloud-function calls. Six node kinds — page/component, element, data_field, handler, set_data, cloud_fn — and eight edge kinds collapse into one JSON file plus a source stamp. A file the parser cannot read does not disappear: it becomes an unresolved_file warning, and stats prints seen, parsed and unresolved counts.",
+          "zh": "build 先读 app.json 和每个 *.json，拿到页面、tabBar 条目、分包根与 independent 标记；再解析 WXML 的节点、绑定、wx:for 作用域和事件属性；然后用 acorn 解析每个 .js（先按 ES module，失败后按经典 script 重试），接上 handler、setData 调用点和云函数调用。六种节点——page/component、element、data_field、handler、set_data、cloud_fn——和八种边在 resolve 阶段收敛成一个 JSON 文件，外加一份源码戳。读不了的文件不会消失：它会变成 unresolved_file 警告，stats 会打印 seen、parsed、unresolved 三个数。"
+        },
+        "image": {
+          "light": "/assets/path-light.svg",
+          "dark": "/assets/path-dark.svg",
+          "alt": {
+            "en": "Pipeline: app.json, component JSON, WXML and JS are parsed, resolved into graph.json with a source stamp, then queried by the CLI and the MCP server",
+            "zh": "流水线：app.json、组件 JSON、WXML 与 JS 经过解析，收敛成带源码戳的 graph.json，再由 CLI 与 MCP server 查询"
+          },
+          "mobile": {
+            "light": "/assets/path-mobile-light.svg",
+            "dark": "/assets/path-mobile-dark.svg"
+          }
+        }
+      },
+      {
+        "title": {
+          "en": "The owned edge: one setData to one element",
+          "zh": "核心边：一次 setData 到具体节点"
+        },
+        "body": {
+          "en": "rerenders exists only when every hop holds: a setData key → the normalised data path (item.unitPrice under wx:for becomes items[].unitPrice) → the host template attribute → the component's declared property → the child template binding → a concrete WXML element. via records whether the re-render is direct or crosses prop:<name>, and every edge carries file:line. A non-literal setData is recorded as a call site with unknown keys; no_binding, unknown_property and no_child_binding are printed as failed hops. A resolved edge is still structural: a wx:if guard can make the element stay out of the render.",
+          "zh": "rerenders 只在每一跳都成立时才存在：setData 的 key → 归一化后的数据路径（wx:for 里的 item.unitPrice 变成 items[].unitPrice）→ 宿主模板属性 → 组件声明的属性 → 子模板绑定 → 具体 WXML 节点。via 记录这次重渲染是 direct 还是穿过 prop:<name>，每条边都带 file:line。非字面量的 setData 只记录调用点，key 未知；no_binding、unknown_property、no_child_binding 作为失败跳转被打印。已解析的边仍是结构性的：wx:if 守卫可以让该节点不进入渲染。"
+        },
+        "image": {
+          "light": "/assets/model-light.svg",
+          "dark": "/assets/model-dark.svg",
+          "alt": {
+            "en": "The rerenders chain: setData key to data field to host attribute to component property to child binding to WXML element, with a failed-hop branch",
+            "zh": "rerenders 链路：setData 的 key 到数据字段、宿主属性、组件属性、子模板绑定，最后到 WXML 节点，并带一条失败跳转分支"
+          },
+          "mobile": {
+            "light": "/assets/model-mobile-light.svg",
+            "dark": "/assets/model-mobile-dark.svg"
+          }
+        }
+      },
+      {
+        "title": {
+          "en": "Three surfaces, all local",
+          "zh": "三个入口，全部在本地"
+        },
+        "body": {
+          "en": "The same graph is exposed through a CLI, an MCP server and a Skill. The CLI offers build, impact (--up, --json, -C), explain, search, stats and init. The MCP server speaks stdio and registers five tools: wxgraph_impact, wxgraph_explain, wxgraph_search, wxgraph_stats and wxgraph_build. The Skill packages the routing rule as one instruction: query the graph for cross-file render impact, read files only for local questions. There is no daemon, no network call and no database; the graph is a JSON file on disk, and a query refuses a graph whose source stamp is stale.",
+          "zh": "同一张图通过 CLI、MCP server 和 Skill 暴露。CLI 有 build、impact（--up、--json、-C）、explain、search、stats、init；MCP server 走 stdio，注册五个工具：wxgraph_impact、wxgraph_explain、wxgraph_search、wxgraph_stats、wxgraph_build；Skill 把路由规则写成一条指令：跨文件的渲染影响问题先查图，只涉及单个文件的局部问题才直接读。没有后台进程、没有网络请求、没有数据库；图就是磁盘上的一个 JSON 文件，源码戳过期的查询会被拒绝。"
+        },
+        "image": {
+          "light": "/assets/agent-light.svg",
+          "dark": "/assets/agent-dark.svg",
+          "alt": {
+            "en": "One graph serving three local surfaces: the CLI commands, five MCP tools over stdio, and the /wxgraph Skill",
+            "zh": "一张图服务三个本地入口：CLI 命令、基于 stdio 的五个 MCP 工具，以及 /wxgraph Skill"
+          },
+          "mobile": {
+            "light": "/assets/agent-mobile-light.svg",
+            "dark": "/assets/agent-mobile-dark.svg"
+          }
+        }
+      }
+    ],
+    "details": [
+      {
+        "title": {
+          "en": "Configuration: one directory records one project",
+          "zh": "配置：一个目录记录一个项目"
+        },
+        "body": {
+          "en": "No config file, no environment variables, no hosted service. init walks up from the directory you point it at (the current directory by default) to find app.json and writes the project into .wxgraph/config.json in the directory where you ran it. build writes the same record when the project is not the cwd. After that, impact, explain, search and stats use the graph in the cwd, or the project recorded there, unless -C names another directory.",
+          "zh": "没有配置文件、没有环境变量、没有托管服务。init 会从你指定的目录（默认是当前目录）向上找 app.json，并把项目写进执行命令的目录下的 .wxgraph/config.json；build 在项目不是当前目录时也写同一份记录。之后 impact、explain、search、stats 会先用当前目录里的图，否则用这里记录的项目；-C 可以显式指定另一个目录。"
+        },
+        "code": "node dist/cli.js init /absolute/path/to/miniprogram\nnode dist/cli.js build /absolute/path/to/miniprogram\nnode dist/cli.js impact components/price-card"
+      },
+      {
+        "title": {
+          "en": "MCP: point any stdio client at the binary",
+          "zh": "MCP：把任意 stdio 客户端指向二进制"
+        },
+        "body": {
+          "en": "wxgraph-mcp serves the graph over stdio; any MCP client that speaks stdio can connect, and v0.1 ships no client-specific plugin. Every answering tool checks the source stamp first and refuses stale data with the single line run wxgraph build. wxgraph_build re-indexes after you edit WXML, JSON or JS.",
+          "zh": "wxgraph-mcp 通过 stdio 提供图；任何支持 stdio 的 MCP 客户端都能接入，v0.1 不附带特定客户端的插件。每个回答工具都会先校验源码戳，过期时只回一行 run wxgraph build；改完 WXML、JSON 或 JS 后，用 wxgraph_build 重建索引。"
+        },
+        "code": "{\n  \"mcpServers\": {\n    \"wxgraph\": {\n      \"command\": \"wxgraph-mcp\",\n      \"args\": [\"--project\", \"/absolute/path/to/miniprogram\"]\n    }\n  }\n}"
+      },
+      {
+        "title": {
+          "en": "Skill: query before grepping",
+          "zh": "Skill：先查图再 grep"
+        },
+        "body": {
+          "en": "skills/wxgraph packages the routing rule as one agent instruction: for render impact across files, call wxgraph_impact; for a local question about one template, read the file. Copy the directory into your agent's skills directory; there is no extra runtime.",
+          "zh": "skills/wxgraph 把路由规则打包成一条 agent 指令：跨文件的渲染影响问题调用 wxgraph_impact；只关于单个模板的局部问题直接读文件。把这个目录复制进 agent 的 skills 目录即可，不需要额外运行时。"
+        },
+        "code": "cp -r skills/wxgraph <your-agent-skills-dir>/wxgraph"
+      },
+      {
+        "title": {
+          "en": "Query contract: exit codes and stale graphs",
+          "zh": "查询契约：退出码与过期图"
+        },
+        "body": {
+          "en": "Success exits 0. An expected runtime failure exits 1: a missing or stale graph, an unknown target, an unreadable app.json. Those failures are one line on stderr prefixed wxgraph:, with no stack trace; an unknown command or option also exits 1. The source stamp covers file sizes and mtimes, so the same graph content can carry a different digest on a fresh checkout.",
+          "zh": "成功返回 0；预期内的运行时失败返回 1：图缺失或过期、目标不存在、app.json 不可读。这些失败只向 stderr 写一行，以 wxgraph: 开头，不带堆栈；未知命令或选项同样返回 1。源码戳覆盖文件大小与 mtime，所以同样的图内容在全新检出时可能得到不同的摘要。"
+        },
+        "code": "node dist/cli.js impact components/price-card -C /absolute/path/to/miniprogram"
+      }
+    ]
+  },
+  "cta": {
+    "headline": {
+      "en": "Read the render path,\nnot a folder of templates.",
+      "zh": "读一条渲染路径，\n而不是一叠模板。"
+    },
+    "sub": {
+      "en": "Local, MIT, Node 22+. Two commands after the build reach the shipped demo, and every edge in the answer carries its own file:line.",
+      "zh": "本地运行、MIT、Node 22+。构建完成后两条命令就能跑通自带示例，答案里的每条边都带着自己的 file:line。"
+    },
+    "button": {
+      "en": "Get started on GitHub",
+      "zh": "在 GitHub 上开始"
+    }
+  },
+  "footer": {
+    "tag": {
+      "en": "Local · no daemon · no network · MIT",
+      "zh": "本地 · 无后台进程 · 无网络请求 · MIT"
+    }
+  },
+  "seo": {
+    "title": {
+      "en": "wxgraph · Change one component. Trace every page it can re-render.",
+      "zh": "wxgraph · 改一个组件。看清哪些页面重渲染。"
+    },
+    "description": {
+      "en": "Generic code graphs index a mini-program's JSON and JS but miss the WXML edges that explain a render. wxgraph parses the manifest, templates and scripts into one local graph and answers which pages a component change re-renders — resolved edges only, every hop carrying file:line.",
+      "zh": "通用代码图只索引小程序的 JSON 和 JS，漏掉了解释渲染的 WXML 边。wxgraph 把 manifest、模板和脚本解析成一张本地图，回答一次组件改动会重新渲染哪些页面——只输出已解析的边，每一跳都带 file:line。"
+    }
+  },
+  "metadata": {
+    "visual_direction": "Dark-first neon graph: cyan-to-indigo identity, blueprint grid, monospace terminal evidence, thin wires with traveling particles; the light theme keeps the same semantic tokens at readable contrast. Illustrative scene is separate from recorded demo facts.",
+    "content_version": 1,
+    "source_version": "v0.1.0"
+  }
+}

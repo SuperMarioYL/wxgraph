@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" width="760" height="300" role="img" aria-labelledby="demo-explain-light-t demo-explain-light-d" data-palette="56bde6-6a81e7-acf6f0-0b4d974338e6">
+<title id="demo-explain-light-t">Explain output figure (light)</title><desc id="demo-explain-light-d">One setData site at pages/cart/index.js:20 resolves items and editing through four hops: two direct and two across declared properties.</desc>
+<defs>
+<linearGradient id="demo-explain-light-neon" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="760" y2="300"><stop stop-color="#387a95"/><stop offset=".55" stop-color="#5a6dc4"/><stop offset="1" stop-color="#557977"/></linearGradient>
+<radialGradient id="demo-explain-light-haze"><stop stop-color="#387a95" stop-opacity=".16"/><stop offset="1" stop-color="#f9fdfe" stop-opacity="0"/></radialGradient>
+<marker id="demo-explain-light-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="m1 1 7 4-7 4" fill="none" stroke="#5a6dc4" stroke-width="1.5"/></marker>
+</defs><style>
+text{font-family:-apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;fill:#132430}
+.mono{font-family:ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace}
+.muted{fill:#557388}
+.title{font-weight:700;letter-spacing:-.4px}
+.kicker{font-weight:700;letter-spacing:2px;fill:#557388}
+.panel{fill:#f7fcfe;stroke:#cbebf7;stroke-width:1.2}
+.key{fill:#f7fcfe;stroke:#387a95;stroke-width:1.6}
+.dashed{fill:#f7fcfe;stroke:#557388;stroke-width:1.1;stroke-dasharray:6 5}
+.chip{fill:#f3fafd;stroke:#cbebf7;stroke-width:1}
+.wire{fill:none;stroke:#cbebf7;stroke-width:1.5}
+.flow{fill:none;stroke:#387a95;stroke-width:1.8;stroke-dasharray:7 10;animation:dash 2.8s linear infinite}
+.primary{fill:#387a95}
+.secondary{fill:#5a6dc4}
+.highlight{fill:#557977}
+.pulse{animation:breathe 4s ease-in-out infinite}
+@keyframes dash{to{stroke-dashoffset:-34}}
+@keyframes breathe{0%,100%{opacity:.32}50%{opacity:.95}}
+@media (prefers-reduced-motion:reduce){.flow,.pulse{animation:none!important}.flow{stroke-dasharray:none}}</style>
+<rect width="760" height="300" fill="#f9fdfe"/>
+
+<line x1="40" y1="0" x2="40" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="80" y1="0" x2="80" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="120" y1="0" x2="120" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="160" y1="0" x2="160" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="200" y1="0" x2="200" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="240" y1="0" x2="240" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="280" y1="0" x2="280" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="320" y1="0" x2="320" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="360" y1="0" x2="360" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="400" y1="0" x2="400" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="440" y1="0" x2="440" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="480" y1="0" x2="480" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="520" y1="0" x2="520" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="560" y1="0" x2="560" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="600" y1="0" x2="600" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="640" y1="0" x2="640" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="680" y1="0" x2="680" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="720" y1="0" x2="720" y2="300" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="0" y1="40" x2="760" y2="40" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="0" y1="80" x2="760" y2="80" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="0" y1="120" x2="760" y2="120" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="0" y1="160" x2="760" y2="160" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="0" y1="200" x2="760" y2="200" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="0" y1="240" x2="760" y2="240" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/><line x1="0" y1="280" x2="760" y2="280" stroke="#cbebf7" stroke-opacity=".18" stroke-width=".6"/>
+<text x="20" y="26" font-size="10.5" class="kicker">EXPLAIN · pages/cart/index.js:20</text>
+<rect class="panel" x="20" y="44" width="250" height="196" rx="12"/>
+<text x="38" y="70" font-size="10" class="kicker">SET_DATA SITE</text>
+<text x="38" y="96" font-size="11.5" class="mono">pages/cart/index.js:20</text>
+<text x="38" y="118" font-size="10.5" class="mono muted">owner pages/cart/index</text>
+<text x="38" y="140" font-size="10.5" class="mono muted">handler onEdit</text>
+<text x="38" y="162" font-size="10.5" class="mono">keys items, editing</text>
+<text x="38" y="190" font-size="10" class="muted">4 hops resolved</text>
+<text x="38" y="212" font-size="10" class="mono primary">0 hops failed</text>
+<rect class="panel" x="290" y="44" width="450" height="42" rx="12"/>
+<text x="306" y="63" font-size="10" class="mono">&quot;items&quot; → &lt;view&gt;</text><text x="306" y="79" font-size="9" class="muted">pages/cart/index.wxml:4 · direct</text>
+<rect class="panel" x="290" y="94" width="450" height="42" rx="12"/>
+<text x="306" y="113" font-size="10" class="mono">&quot;items&quot; → &lt;text&gt; price</text><text x="306" y="129" font-size="9" class="muted">components/price-card.wxml:2 · prop:price</text>
+<rect class="panel" x="290" y="144" width="450" height="42" rx="12"/>
+<text x="306" y="163" font-size="10" class="mono">&quot;items&quot; → &lt;view&gt;</text><text x="306" y="179" font-size="9" class="muted">pages/cart/index.wxml:8 · direct</text>
+<rect class="key" x="290" y="194" width="450" height="42" rx="12"/>
+<text x="306" y="213" font-size="10" class="mono">&quot;editing&quot; → &lt;view&gt; editing</text><text x="306" y="229" font-size="9" class="muted">components/price-card.wxml:4 · prop:editing</text>
+<text x="20" y="272" font-size="11" class="muted">explain prints every resolved hop; failed hops carry no_binding, unknown_property or no_child_binding.</text>
+</svg>
