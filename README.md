@@ -45,32 +45,33 @@ into one graph. The owned edge is `rerenders`: a `setData` key resolved through
 a data path, a host attribute and (when the value crosses a component boundary)
 a declared property, down to a concrete WXML element. Every edge carries
 `file:line` provenance. When a hop does not resolve, no edge is emitted, and
-`impact` / `explain` print the failed hop instead of guessing.
+the miss is never silent: `impact` lists the failed hop with its status and
+`explain` prints every attempt.
 
 ## Quickstart
 
 Requires Node 22 or newer. The repository ships a small synthetic mini-program in
-`examples/demo` so the first result is one command away.
+`examples/demo` so the first result is two commands away.
 
 ```bash
 git clone https://github.com/SuperMarioYL/wxgraph.git
 cd wxgraph
 npm ci
 npm run build
-npm link                 # puts `wxgraph` and `wxgraph-mcp` on your PATH
-cd examples/demo
-wxgraph build
-wxgraph impact components/price-card
+node dist/cli.js build examples/demo
+node dist/cli.js impact components/price-card
 ```
 
-`wxgraph build` indexes the project and writes the graph:
+`build` indexes the project and writes the graph:
 
 ```text
 1 subpackage · 3 pages · 1 component · 19 wxml nodes · 57 edges · 34ms
-wrote .wxgraph/graph.json
+wrote examples/demo/.wxgraph/graph.json
 ```
 
-`wxgraph impact` answers the blast-radius question from the graph:
+`impact` answers the blast-radius question from the graph, with no `cd` and no
+`-C`: the build recorded the project for the directory it ran in
+(`.wxgraph/config.json`).
 
 ```text
 components/price-card  (component)  included by 2 hosts
@@ -93,8 +94,8 @@ Counts and `file:line` values are stable for the shipped demo; the build timing
 depends on the machine. The full recorded run, including `--json`, is in
 [`docs/demo-results.json`](./docs/demo-results.json).
 
-If your global npm prefix is not writable, skip `npm link` and replace `wxgraph`
-with `node ../../dist/cli.js` in the last two commands.
+`npm link` (or `npm install -g .`) puts `wxgraph` and `wxgraph-mcp` on your
+PATH; the commands above then read `wxgraph build examples/demo` and so on.
 
 ## Demo
 
@@ -112,7 +113,9 @@ Reading the answer:
   the `setData` owner's own template.
 - **`unresolved_setdata`** is not an error and not a guessed edge: `onLoad` passes
   a non-literal object to `this.setData`, so the graph records the call site and
-  says which keys it cannot know.
+  says which keys it cannot know. A hop that fails to resolve for a different
+  reason (`no_binding`, `unknown_property`, `no_child_binding`) appears above it
+  in an `unresolved hop(s)` block with the same status and detail `explain` uses.
 
 ## How it works
 
@@ -139,19 +142,25 @@ Edges are `contains`, `includes`, `in_subpackage`, `binds`, `handles`,
 `calls_setdata`, `invokes`, and the owned `rerenders`. There is no daemon, no
 network call and no database: the graph is a JSON file with a source stamp.
 
-Scripts are parsed as ES modules first and retried as classic scripts per file,
-because mini-program pages are commonly modules while utility files are commonly
-scripts. A file that fails both parses becomes an `unresolved_file` warning in
-`wxgraph stats`, never a silent gap.
+Every `.js` file the project walk sees is parsed — page and component scripts,
+utility modules and anything else — because an unreadable helper is still a gap
+in the graph. Parsing is ES module first with a per-file classic-script retry;
+a file that fails both becomes an `unresolved_file` warning carrying its parse
+error, and `wxgraph stats` prints how many `.js` files were seen, parsed and
+unresolved, so the miss is never a silent gap. `.ts` sources are counted in the
+same line and warned as `unsupported_ts`: v0.1 does not analyse them.
 
 ## Usage
 
 ```bash
+wxgraph init [dir]               # find app.json and record the project for this directory
 wxgraph build [dir]              # index a mini-program; writes .wxgraph/graph.json
 wxgraph impact <target>          # what re-renders when this changes
+wxgraph impact <target> --up     # walk the hosts that include this target
 wxgraph impact <target> --json   # structured result for machines
 wxgraph impact <target> -C dir   # query a project other than the cwd
 wxgraph explain <edge>           # every hop behind one setData site or element
+wxgraph search <query>           # find node ids, data paths and setData keys
 wxgraph stats                    # counts plus what the parser could not read
 ```
 
@@ -160,7 +169,13 @@ wxgraph stats                    # counts plus what the parser could not read
 (`components/price-card.wxml:4:view`). `<edge>` accepts a `set_data` node id
 (`pages/cart/index:20`), a `file:line` call site (`pages/cart/index.js:20`), or
 an element id. `explain` prints the resolved hops and the failed ones with their
-status: `non_literal`, `no_binding`, `unknown_property`, `no_child_binding`.
+status: `non_literal`, `no_binding`, `unknown_property`, `no_child_binding`;
+`impact` prints the failed hops that touch the target under `unresolved hop(s)`.
+
+`init` writes `.wxgraph/config.json` in the directory you run it from, with the
+project it discovered. `build` records the same file when the project is not the
+cwd, so a query with no `-C` uses the graph in the cwd, or the project recorded
+there by `init` or the last `build`.
 
 Query commands verify the graph stamp before answering. A missing or stale graph
 is refused with one line:
@@ -193,9 +208,10 @@ After `npm link` (or `npm install -g .`), point the client at the binary:
 
 | Tool | Use it for |
 | --- | --- |
-| `wxgraph_impact` | blast radius of a page, component or element; `json: true` for machines |
+| `wxgraph_impact` | blast radius of a page, component or element; `json: true` for machines, `up: true` to walk hosts |
 | `wxgraph_explain` | every hop behind one `setData` site or element, including failed hops |
-| `wxgraph_stats` | counts, warnings, unreadable files, unresolved components |
+| `wxgraph_search` | find a node id by name, path, tag or `setData` key |
+| `wxgraph_stats` | counts, warnings, unreadable `.js` files, unanalysed `.ts` files, unresolved components |
 | `wxgraph_build` | re-index after editing WXML, JSON or JS |
 
 The same routing logic is packaged as a Skill: copy `skills/wxgraph` into your
@@ -221,14 +237,18 @@ Implemented, and exercised by the test suite:
 - <img src="https://api.iconify.design/tabler/terminal-2.svg?color=%236e56cf&height=16" alt="" /> **Scripts.** `Page({...})`, `Component({ methods: {...} })`, handler methods,
   literal and nested-literal `setData` keys, non-literal `setData` sites,
   declared component `properties`, and `wx.cloud.callFunction` call sites.
+  Every `.js` file in the walk is parsed and counted in `stats`; `.ts` files are
+  counted and warned, not analysed.
 - <img src="https://api.iconify.design/tabler/route.svg?color=%236e56cf&height=16" alt="" /> **Impact.** `setData` key → data path → host attribute → component property →
-  child binding → element, closed only when every hop resolves.
+  child binding → element, closed only when every hop resolves. Failed hops are
+  printed, and `impact --up` walks the `includes` edges back to every caller.
 
 Not in v0.1 — stated so the graph's silence is not mistaken for an answer:
 
 - Native `.wxml` projects only. Taro, uni-app and kbone compiled output are not
   analysed.
-- `.js` sources only. `.ts` files are not analysed.
+- `.js` sources only. `.ts` files are counted and warned by `wxgraph stats`; they
+  are not analysed.
 - No WXSS or layout edges.
 - Cloud-function bodies are not parsed; only call sites are recorded.
 - WXML expressions are read for data paths, not evaluated. Ternaries and method
@@ -264,8 +284,10 @@ npm test            # vitest run
 ```
 
 The test suite covers the parsers, the graph builder, the property-hop resolver,
-the stale-stamp contract, and the shipped demo's CLI output. `examples/demo` is
-part of the contract: the CLI tests build it and assert the impact tree.
+the failed-hop reporting, the caller walk, search, the script/`.ts` counters, the
+stale-stamp contract, and the shipped demo's CLI output. `examples/demo` is part
+of the contract: the CLI tests build it, then query it from the repository root
+exactly as the quickstart does.
 
 ## License
 

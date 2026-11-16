@@ -49,10 +49,14 @@ Tools:
 
 | tool | use it for |
 | --- | --- |
-| `wxgraph_impact` | blast radius of a page, component or element. Pass `json: true` for machines. |
+| `wxgraph_impact` | blast radius of a page, component or element. Pass `json: true` for machines, `up: true` to walk the hosts that include it. |
 | `wxgraph_explain` | every hop behind one `setData` site or element, including failed hops |
+| `wxgraph_search` | find a node id by page/component id, element, handler, data path or `setData` key |
 | `wxgraph_stats` | counts plus what the parser could not read |
 | `wxgraph_build` | re-index after editing WXML/JSON/JS |
+
+When you only know a name, call `wxgraph_search` first and pass the returned id
+to `wxgraph_impact` or `wxgraph_explain`.
 
 Every answering tool refuses a stale graph and replies with exactly one line:
 `run wxgraph build`.
@@ -81,14 +85,18 @@ own template.
 - `unresolved_setdata` means the handler called `this.setData(patch)` with a
   non-literal argument. Read that handler by hand; the graph cannot enumerate
   keys it never saw.
+- `impact` prints an `unresolved hop(s)` block for keys that failed to resolve
+  against the target (`no_binding`, `unknown_property`, `no_child_binding`).
+  That is the graph refusing to invent an edge, not an empty blast radius.
 - Warnings from `wxgraph_stats` are part of the answer: `unresolved_file` means
-  a `.js` file failed both module and script parsing, `unresolved_handler` means
-  a handler attribute names no method in that unit.
+  a `.js` file in the project failed both module and script parsing,
+  `unresolved_handler` means a handler attribute names no method in that unit,
+  and `unsupported_ts` means a `.ts` file was counted but not analysed.
 
 ## Limits (v0.1)
 
 - Native `.wxml` only: no Taro/uni-app/kbone output.
-- `.js` sources only; `.ts` files are not analysed.
+- `.js` sources only; `.ts` files are counted and warned, not analysed.
 - No WXSS/stylesheet edges, no cloud-function bodies (call sites only), no
   expression evaluation beyond data paths.
 - No watch mode: re-run `wxgraph build` after edits.

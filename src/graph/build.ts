@@ -37,7 +37,7 @@ const IGNORED_GLOBS = [
   "**/dist/**",
 ];
 
-const STAMP_GLOBS = "**/*.{json,wxml,js}";
+const STAMP_GLOBS = "**/*.{json,wxml,js,ts}";
 
 interface UnitState {
   unit: UnitNode;
@@ -358,24 +358,61 @@ export async function buildGraph(projectDirInput: string): Promise<Graph> {
   // m2: link page/component scripts to the nodes above.
   const scriptHandlerNames = new Map<string, Set<string>>();
   const cloudNodes = new Map<string, CloudFnNode>();
-  const jsFiles = await fg("**/*.js", {
-    cwd: projectDir,
-    ignore: IGNORED_GLOBS,
-    onlyFiles: true,
-    dot: false,
-  });
+  const jsFiles = (
+    await fg("**/*.js", {
+      cwd: projectDir,
+      ignore: IGNORED_GLOBS,
+      onlyFiles: true,
+      dot: false,
+    })
+  )
+    .map(toPosix)
+    .sort();
 
-  for (const relative of jsFiles.map(toPosix).sort()) {
+  // `.ts` sources are inside the project but outside the v0.1 grammar. They
+  // are counted (and part of the source stamp) so the gap is visible in
+  // `stats` instead of silent.
+  const tsFiles = (
+    await fg("**/*.ts", {
+      cwd: projectDir,
+      ignore: IGNORED_GLOBS,
+      onlyFiles: true,
+      dot: false,
+    })
+  )
+    .map(toPosix)
+    .sort();
+  for (const relative of tsFiles) {
+    warnings.push({
+      code: "unsupported_ts",
+      message:
+        `${relative} is TypeScript; v0.1 analyses .js sources only, ` +
+        `so this file contributes no nodes`,
+      file: relative,
+    });
+  }
+
+  // Every `.js` file the walk sees is parsed, not only the pages and
+  // components: a utility file that fails to parse is still a gap in the
+  // graph, and `stats` has to report it.
+  let jsParsed = 0;
+  let jsUnresolved = 0;
+  for (const relative of jsFiles) {
     const ownerId = relative.replace(/\.js$/, "");
-    if (!units.has(ownerId)) continue;
+    const owner = units.get(ownerId);
     const source = await readOptionalFile(projectDir, relative);
     if (source === null) continue;
 
     const parsed = parseScript(source, { file: relative, owner: ownerId });
     if (!parsed.ok) {
+      jsUnresolved += 1;
       warnings.push({ code: "unresolved_file", message: parsed.error, file: relative });
       continue;
     }
+    jsParsed += 1;
+    // A readable file no unit owns (a helper, an app-level module) is counted
+    // and parsed but contributes no nodes.
+    if (owner === undefined) continue;
 
     const script = parsed.script;
     // Only a readable Page/Component object makes the method set authoritative.
@@ -383,8 +420,7 @@ export async function buildGraph(projectDirInput: string): Promise<Graph> {
       scriptHandlerNames.set(ownerId, new Set(script.handlers.map((handler) => handler.name)));
     }
     if (script.propertyNames.length > 0) {
-      const unit = units.get(ownerId);
-      if (unit !== undefined) unit.properties = [...script.propertyNames].sort();
+      owner.properties = [...script.propertyNames].sort();
     }
     nodes.push(...script.handlers, ...script.setDataNodes);
 
@@ -511,6 +547,10 @@ export async function buildGraph(projectDirInput: string): Promise<Graph> {
       handles: countRel(sortedEdges, "handles"),
       calls_setdata: countRel(sortedEdges, "calls_setdata"),
       rerenders: countRel(sortedEdges, "rerenders"),
+      js_files: jsFiles.length,
+      js_parsed: jsParsed,
+      js_unresolved: jsUnresolved,
+      ts_files: tsFiles.length,
     },
     stamp: await computeSourceStamp(projectDir),
   };

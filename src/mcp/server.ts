@@ -8,9 +8,11 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 
 import { loadGraph, writeGraph } from "../graph/build";
-import { computeImpact, explain, formatImpact } from "../query/impact";
+import { computeImpact, computeImpactUp, explain, formatImpact, formatImpactUp } from "../query/impact";
+import { formatSearch, searchGraph } from "../query/search";
 
 const STALE_HINT = "run wxgraph build";
+const SEARCH_LIMIT = 50;
 
 function text(value: string): { content: Array<{ type: "text"; text: string }> } {
   return { content: [{ type: "text", text: value }] };
@@ -37,7 +39,8 @@ export function createWxgraphServer(projectDir: string): McpServer {
       instructions:
         "Semantic graph of a WeChat mini-program. Ask wxgraph_impact before reading " +
         "WXML/JS files to trace a change; the graph carries setData -> render edges " +
-        "with file:line provenance.",
+        "with file:line provenance. wxgraph_search finds a node id when you only " +
+        "know a name.",
     },
   );
 
@@ -48,20 +51,30 @@ export function createWxgraphServer(projectDir: string): McpServer {
       description:
         "Blast radius of a page, component or element: which hosts include it, " +
         "which data path feeds each property, and which setData calls re-render which " +
-        "elements. Non-literal setData sites are reported as unresolved_setdata " +
-        "instead of being guessed.",
+        "elements. Non-literal setData sites and hops that failed to resolve are " +
+        "reported instead of guessed. Set up: true to walk callers instead of callees.",
       inputSchema: {
         target: z
           .string()
           .min(1)
           .describe('Unit id ("components/price-card"), file path, or element id'),
         json: z.boolean().optional().describe("Return the structured result instead of a tree"),
+        up: z
+          .boolean()
+          .optional()
+          .describe("Walk the hosts that include this target, transitively, instead of its re-renders"),
       },
     },
-    async ({ target, json }) => {
+    async ({ target, json, up }) => {
       const loaded = await loadGraph(projectDir);
       if (loaded.status !== "ok") return failure(STALE_HINT);
       try {
+        if (up === true) {
+          const result = computeImpactUp(loaded.graph, target);
+          return text(
+            json === true ? `${JSON.stringify(result, null, 2)}\n` : formatImpactUp(result),
+          );
+        }
         const result = computeImpact(loaded.graph, target);
         return text(json === true ? `${JSON.stringify(result, null, 2)}\n` : formatImpact(result));
       } catch (error) {
@@ -96,12 +109,37 @@ export function createWxgraphServer(projectDir: string): McpServer {
   );
 
   server.registerTool(
+    "wxgraph_search",
+    {
+      title: "Find a node",
+      description:
+        "Case-insensitive search over page/component ids, element ids, handler names, " +
+        "data paths and setData keys. Use it to find the exact target for " +
+        "wxgraph_impact or wxgraph_explain.",
+      inputSchema: {
+        query: z.string().min(1).describe('Text to find, e.g. "price-card" or "unitPrice"'),
+        limit: z.number().int().min(1).max(200).optional().describe("Maximum hits (default 50)"),
+      },
+    },
+    async ({ query, limit }) => {
+      const loaded = await loadGraph(projectDir);
+      if (loaded.status !== "ok") return failure(STALE_HINT);
+      const max = limit ?? SEARCH_LIMIT;
+      try {
+        return text(formatSearch(searchGraph(loaded.graph, query, max), max));
+      } catch (error) {
+        return failure(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
     "wxgraph_stats",
     {
       title: "Graph counts and warnings",
       description:
-        "Node/edge counts, unreadable files, unresolved components and handler " +
-        "attributes with no matching method.",
+        "Node/edge counts, unreadable `.js` files, `.ts` files that are not analysed, " +
+        "unresolved components and handler attributes with no matching method.",
       inputSchema: {},
     },
     async () => {
@@ -119,6 +157,8 @@ export function createWxgraphServer(projectDir: string): McpServer {
           `${graph.stats.calls_setdata} calls_setdata · ${graph.stats.rerenders} rerenders`,
         `${graph.stats.handlers} handlers · ${graph.stats.set_data} setData sites · ` +
           `${graph.stats.cloud_fns} cloud functions`,
+        `scripts   ${graph.stats.js_files} .js files seen · ${graph.stats.js_parsed} parsed · ` +
+          `${graph.stats.js_unresolved} unresolved · ${graph.stats.ts_files} .ts files not analysed`,
       ];
       if (graph.warnings.length > 0) {
         lines.push("", `${graph.warnings.length} warning(s):`);

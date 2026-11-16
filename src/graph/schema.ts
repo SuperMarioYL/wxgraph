@@ -193,6 +193,7 @@ export type WarningCode =
   | "unresolved_component"
   | "unresolved_file"
   | "unresolved_handler"
+  | "unsupported_ts"
   | "invalid_json";
 
 export interface GraphWarning {
@@ -229,6 +230,14 @@ export interface GraphStats {
   handles: number;
   calls_setdata: number;
   rerenders: number;
+  /** Every `.js` file the project walk saw, whether or not a unit owns it. */
+  js_files: number;
+  /** `.js` files that parsed as a module or a classic script. */
+  js_parsed: number;
+  /** `.js` files that failed both parses; each is an `unresolved_file` warning. */
+  js_unresolved: number;
+  /** `.ts` files seen and warned about, never analysed. */
+  ts_files: number;
 }
 
 export interface Graph {

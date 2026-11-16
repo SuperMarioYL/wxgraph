@@ -2,6 +2,7 @@ import type {
   ElementNode,
   Graph,
   HandlerNode,
+  IncludesEdge,
   SetDataNode,
   UnitKind,
   UnitNode,
@@ -9,6 +10,7 @@ import type {
 import { normalizeUnitPath } from "../parse/manifest";
 import {
   resolveGraph,
+  type AttemptStatus,
   type Resolution,
   type ResolvedBinding,
   type RerenderAttempt,
@@ -60,6 +62,18 @@ export interface ImpactUnresolved {
   handler: string | null;
 }
 
+/** A `setData` key whose path did not resolve, reported instead of guessed. */
+export interface ImpactUnresolvedHop {
+  owner: string;
+  callId: string;
+  file: string;
+  line: number;
+  key: string;
+  status: Exclude<AttemptStatus, "resolved" | "non_literal">;
+  detail: string;
+  handler: string | null;
+}
+
 export interface ImpactResult {
   target: string;
   kind: UnitKind | "element";
@@ -67,6 +81,7 @@ export interface ImpactResult {
   hosts: ImpactHost[];
   rerenders: ImpactRerender[];
   unresolvedSetData: ImpactUnresolved[];
+  unresolvedHops: ImpactUnresolvedHop[];
 }
 
 function isUnit(node: { kind: string }): node is UnitNode {
@@ -195,11 +210,47 @@ function dedupeRerenders(rerenders: ImpactRerender[]): ImpactRerender[] {
 }
 
 /**
+ * True when the failed attempt was trying to cross into `unitId`: it bound a
+ * data path to a tag that resolves to that component.
+ */
+function attemptCrossesInto(
+  attempt: RerenderAttempt,
+  unitId: string,
+  resolution: Resolution,
+): boolean {
+  if (attempt.matched === undefined) return false;
+  const unit = resolution.units.get(attempt.owner);
+  const element = unit?.elements.get(attempt.matched.element);
+  return element !== undefined && unit?.components.get(element.tag) === unitId;
+}
+
+function toUnresolvedHop(
+  attempt: RerenderAttempt,
+  maps: Maps,
+): ImpactUnresolvedHop | null {
+  if (attempt.key === null) return null;
+  if (attempt.status === "resolved" || attempt.status === "non_literal") return null;
+  const handlerId = maps.callHandler.get(attempt.call);
+  const handler = handlerId === undefined ? undefined : maps.handlers.get(handlerId);
+  return {
+    owner: attempt.owner,
+    callId: attempt.call,
+    file: attempt.file,
+    line: attempt.line,
+    key: attempt.key,
+    status: attempt.status,
+    detail: attempt.detail,
+    handler: handler?.name ?? null,
+  };
+}
+
+/**
  * Answer "if this component changes, what re-renders and why".
  *
  * The result is the `rerenders` closure touching the target: edges that land
  * on elements the target owns, plus edges the target's own `setData` calls
- * produce. Non-literal `setData` sites are listed instead of guessed.
+ * produce. Non-literal `setData` sites and hops that failed to resolve are
+ * listed instead of guessed.
  */
 export function computeImpact(
   graph: Graph,
@@ -215,6 +266,7 @@ export function computeImpact(
     hosts: [],
     rerenders: [],
     unresolvedSetData: [],
+    unresolvedHops: [],
   };
 
   if (target.kind === "element") {
@@ -291,7 +343,147 @@ export function computeImpact(
     });
   }
 
+  // A hop that failed on the target's own data, or on a host attribute that
+  // feeds this component, is part of the answer: the miss must never be
+  // silent. Attempts elsewhere in the project stay out of this result.
+  for (const attempt of resolution.attempts) {
+    if (attempt.owner !== target.id && !attemptCrossesInto(attempt, target.id, resolution)) {
+      continue;
+    }
+    const hop = toUnresolvedHop(attempt, maps);
+    if (hop !== null) result.unresolvedHops.push(hop);
+  }
+  result.unresolvedHops.sort((left, right) => {
+    if (left.file !== right.file) return left.file.localeCompare(right.file);
+    if (left.line !== right.line) return left.line - right.line;
+    return left.key.localeCompare(right.key);
+  });
+
   return result;
+}
+
+export interface ImpactUpDependent {
+  id: string;
+  kind: UnitKind;
+  /** 1 for a direct host, 2 for a host of a host, and so on. */
+  depth: number;
+  /** The tag in the dependent's template that pulls the child in. */
+  tag: string;
+  file: string;
+  line: number;
+}
+
+export interface ImpactUpResult {
+  target: string;
+  kind: UnitKind | "element";
+  file: string | null;
+  /** Element targets: the unit whose template owns the element. */
+  owner: string | null;
+  dependents: ImpactUpDependent[];
+}
+
+/**
+ * Walk the `includes` edges backwards: which units pull this target in, and
+ * which units pull those in. This is the caller side of `impact`.
+ */
+export function computeImpactUp(graph: Graph, rawTarget: string): ImpactUpResult {
+  const target = findImpactTarget(graph, rawTarget);
+  const units = new Map<string, UnitNode>();
+  for (const node of graph.nodes) {
+    if (isUnit(node)) units.set(node.id, node);
+  }
+
+  const result: ImpactUpResult = {
+    target: target.id,
+    kind: target.kind,
+    file: target.file,
+    owner: null,
+    dependents: [],
+  };
+
+  let start: string | null;
+  if (target.kind === "element") {
+    const element = graph.nodes.find(
+      (node): node is ElementNode => node.kind === "element" && node.id === target.id,
+    );
+    start = element?.host ?? null;
+    result.owner = start;
+  } else {
+    start = target.id;
+  }
+  if (start === null) return result;
+
+  const includedBy = new Map<string, IncludesEdge[]>();
+  for (const edge of graph.edges) {
+    if (edge.rel !== "includes") continue;
+    const list = includedBy.get(edge.to);
+    if (list === undefined) includedBy.set(edge.to, [edge]);
+    else list.push(edge);
+  }
+
+  const visited = new Set<string>([start]);
+  let frontier = [start];
+  let depth = 1;
+  while (frontier.length > 0 && depth <= 16) {
+    const next: string[] = [];
+    for (const id of [...frontier].sort()) {
+      for (const edge of includedBy.get(id) ?? []) {
+        if (visited.has(edge.from)) continue;
+        visited.add(edge.from);
+        const unit = units.get(edge.from);
+        if (unit === undefined) continue;
+        result.dependents.push({
+          id: edge.from,
+          kind: unit.kind,
+          depth,
+          tag: edge.tag,
+          file: edge.file,
+          line: edge.line,
+        });
+        next.push(edge.from);
+      }
+    }
+    frontier = next;
+    depth += 1;
+  }
+
+  result.dependents.sort((left, right) =>
+    left.depth !== right.depth ? left.depth - right.depth : left.id.localeCompare(right.id),
+  );
+  return result;
+}
+
+/** Render the caller walk as an indented tree. */
+export function formatImpactUp(result: ImpactUpResult): string {
+  const header =
+    result.kind === "element"
+      ? `${result.target}  (element)`
+      : `${result.target}  (${result.kind})`;
+  const lines = [header];
+  if (result.owner !== null) lines.push(`owned by  ${result.owner}`);
+  lines.push("");
+
+  if (result.dependents.length === 0) {
+    lines.push("(no unit includes this target)");
+    return `${lines.join("\n").trimEnd()}\n`;
+  }
+
+  const direct = result.dependents.filter((dependent) => dependent.depth === 1).length;
+  const maxDepth = Math.max(...result.dependents.map((dependent) => dependent.depth));
+  lines.push(
+    `reached from ${result.dependents.length} unit(s): ` +
+      `${direct} direct host(s), ${maxDepth} level(s) up`,
+  );
+  lines.push("");
+  result.dependents.forEach((dependent, index) => {
+    const indent = "  ".repeat(dependent.depth - 1);
+    const lastAtDepth = result.dependents[index + 1]?.depth !== dependent.depth;
+    lines.push(
+      `${indent}${lastAtDepth ? "└─" : "├─"} ${dependent.id}  (${dependent.kind})  ` +
+        `via <${dependent.tag}>  ${dependent.file}:${dependent.line}`,
+    );
+  });
+  return `${lines.join("\n").trimEnd()}\n`;
 }
 
 function formatKeys(keys: string[] | null): string {
@@ -356,6 +548,18 @@ export function formatImpact(result: ImpactResult): string {
       lines.push(`├─ ${formatSetData(rerender)}`);
     }
     if (result.rerenders.length === 0) lines.push("(no resolved rerenders edges)");
+  }
+
+  if (result.unresolvedHops.length > 0) {
+    lines.push("");
+    lines.push(`${result.unresolvedHops.length} unresolved hop(s):`);
+    for (const hop of result.unresolvedHops) {
+      const handler = hop.handler === null ? "" : ` in ${hop.handler}`;
+      lines.push(
+        `  ${hop.file}:${hop.line}${handler}  "${hop.key}"  ` +
+          `no edge (${hop.status})  ${hop.detail}`,
+      );
+    }
   }
 
   if (result.unresolvedSetData.length > 0) {

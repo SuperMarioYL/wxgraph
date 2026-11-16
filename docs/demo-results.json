@@ -20,32 +20,38 @@
   },
   "commands": [
     {
-      "command": "wxgraph build examples/demo",
+      "command": "node dist/cli.js build examples/demo",
       "cwd": "repository root",
       "exit_code": 0,
-      "stdout": "1 subpackage · 3 pages · 1 component · 19 wxml nodes · 57 edges · 34ms\nwrote .wxgraph/graph.json"
+      "stdout": "1 subpackage · 3 pages · 1 component · 19 wxml nodes · 57 edges · 35ms\nwrote examples/demo/.wxgraph/graph.json"
     },
     {
-      "command": "wxgraph impact components/price-card",
-      "cwd": "examples/demo",
+      "command": "node dist/cli.js impact components/price-card",
+      "cwd": "repository root",
       "exit_code": 0,
       "stdout": "components/price-card  (component)  included by 2 hosts\n\n├─ pages/cart/index.wxml:5  <price-card editing=\"{{editing}}\" price=\"{{item.unitPrice}}\">\n│    ← data editing  (pages/cart/index.js)\n│    ← data items[].unitPrice  (pages/cart/index.js)\n│    ├─ setData({items, editing}) in onEdit  pages/cart/index.js:20  →  <text>  components/price-card.wxml:2  [via prop:price]\n│    └─ setData({items, editing}) in onEdit  pages/cart/index.js:20  →  <view>  components/price-card.wxml:4  [via prop:editing]\n└─ pages/order/detail.wxml:4  <price-card price=\"{{order.total}}\">\n     ← data order.total  (pages/order/detail.js)\n     ├─ setData({order, order.no, order.total}) in onLoad  pages/order/detail.js:11  →  <text>  components/price-card.wxml:2  [via prop:price]\n     └─ setData({order.total}) in onEditPrice  pages/order/detail.js:17  →  <text>  components/price-card.wxml:2  [via prop:price]\n\n1 unresolved_setdata site(s):\n  pages/cart/index.js:12 in onLoad  this.setData(<non-literal>)"
     },
     {
-      "command": "wxgraph stats",
-      "cwd": "examples/demo",
+      "command": "node dist/cli.js impact components/price-card --up",
+      "cwd": "repository root",
       "exit_code": 0,
-      "stdout": "graph     .wxgraph/graph.json\nstamp     f04300155bd352d3  14 source files\n\n1 subpackage · 3 pages · 1 component · 19 wxml nodes · 57 edges\n11 binds · 7 handles · 6 calls_setdata · 10 rerenders\n9 handlers · 6 setData sites · 1 cloud function"
+      "stdout": "components/price-card  (component)\n\nreached from 2 unit(s): 2 direct host(s), 1 level(s) up\n\n├─ pages/cart/index  (page)  via <price-card>  pages/cart/index.wxml:5\n└─ pages/order/detail  (page)  via <price-card>  pages/order/detail.wxml:4"
     },
     {
-      "command": "wxgraph explain pages/cart/index.js:20",
-      "cwd": "examples/demo",
+      "command": "node dist/cli.js stats",
+      "cwd": "repository root",
+      "exit_code": 0,
+      "stdout": "graph     examples/demo/.wxgraph/graph.json\nstamp     15a707d39d01629d  14 source files\n\n1 subpackage · 3 pages · 1 component · 19 wxml nodes · 57 edges\n11 binds · 7 handles · 6 calls_setdata · 10 rerenders\n9 handlers · 6 setData sites · 1 cloud function\nscripts   4 .js files seen · 4 parsed · 0 unresolved · 0 .ts files not analysed"
+    },
+    {
+      "command": "node dist/cli.js explain pages/cart/index.js:20",
+      "cwd": "repository root",
       "exit_code": 0,
       "stdout": "setData site  pages/cart/index.js:20  (owner pages/cart/index)\nhandler  onEdit  pages/cart/index.js:15\nkeys     items, editing\n\n  \"items\"  resolved [direct]  \"items\" -> items -> <view> pages/cart/index.wxml:4\n  \"items\"  resolved [prop:price]  \"items\" -> items[].unitPrice -> <price-card price> -> <text> price components/price-card.wxml:2\n  \"items\"  resolved [direct]  \"items\" -> items.length -> <view> pages/cart/index.wxml:8\n  \"editing\"  resolved [prop:editing]  \"editing\" -> editing -> <price-card editing> -> <view> editing components/price-card.wxml:4"
     },
     {
-      "command": "wxgraph impact components/price-card --json",
-      "cwd": "examples/demo",
+      "command": "node dist/cli.js impact components/price-card --json",
+      "cwd": "repository root",
       "exit_code": 0,
       "structured_result": {
         "target": "components/price-card",
@@ -86,7 +92,8 @@
             "line": 12,
             "handler": "onLoad"
           }
-        ]
+        ],
+        "unresolved_hops": []
       }
     }
   ],
@@ -105,6 +112,10 @@
     "handles": 7,
     "calls_setdata": 6,
     "rerenders": 10,
+    "js_files_seen": 4,
+    "js_parsed": 4,
+    "js_unresolved": 0,
+    "ts_files_not_analysed": 0,
     "hosts": 2,
     "on_edit_rerenders": [
       {
@@ -119,13 +130,14 @@
     "unresolved_setdata": "pages/cart/index.js:12 (onLoad passes a non-literal object)"
   },
   "notes": [
+    "Every query was run from the repository root with no -C and no cd: the build recorded examples/demo in .wxgraph/config.json for that directory.",
     "Build time is wall-clock on the recording machine; counts and file:line values are stable for this demo.",
     "The stamp digest is derived from source file sizes and mtimes, so it differs on a fresh checkout even though the graph content is identical.",
     "The demo is synthetic and shipped with the repository; no user project is represented."
   ],
   "limitations": [
     "Native .wxml projects only; Taro, uni-app and kbone compiled output are not analysed.",
-    "Only .js sources are parsed; .ts files are not analysed.",
+    "Only .js sources are parsed; .ts files are counted and warned, not analysed.",
     "WXSS and styling are out of scope: the graph has no stylesheet edges.",
     "Cloud-function bodies are not parsed; only wx.cloud.callFunction call sites are recorded.",
     "WXML expressions yield data paths, not evaluated values; ternaries and method calls are not computed.",

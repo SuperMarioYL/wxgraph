@@ -10,7 +10,8 @@ import type {
   RerendersEdge,
   SetDataNode,
 } from "../src/graph/schema";
-import { computeImpact, explain, formatImpact } from "../src/query/impact";
+import { computeImpact, computeImpactUp, explain, formatImpact, formatImpactUp } from "../src/query/impact";
+import { formatSearch, searchGraph } from "../src/query/search";
 
 const PAGE_SCRIPT = `Page({
   data: { items: [], editing: false },
@@ -165,6 +166,19 @@ describe("rerenders through a custom-component property", () => {
       expect(rendered).toContain("included by 1 hosts");
       expect(rendered).toContain("price=\"{{item.unitPrice}}\"");
       expect(rendered).not.toContain("[via prop:");
+
+      // The failed hop is part of the answer, not silent.
+      expect(result.unresolvedHops).toContainEqual(
+        expect.objectContaining({
+          owner: "pages/cart/index",
+          key: "items",
+          status: "no_child_binding",
+          handler: "onEdit",
+        }),
+      );
+      expect(rendered).toContain("1 unresolved hop(s):");
+      expect(rendered).toContain("no edge (no_child_binding)");
+      expect(rendered).toContain('property "price"');
     });
   });
   it("refuses a property the child script does not declare", async () => {
@@ -209,6 +223,17 @@ describe("rerenders through a custom-component property", () => {
           expect.objectContaining({ via: "direct", elementFile: "components/price-card.wxml" }),
         );
         expect(formatImpact(result)).toContain("own setData:");
+
+        // The dropped attribute is reported against the host, not guessed.
+        expect(result.unresolvedHops).toContainEqual(
+          expect.objectContaining({
+            owner: "pages/cart/index",
+            key: "total",
+            status: "unknown_property",
+          }),
+        );
+        expect(formatImpact(result)).toContain("unresolved hop(s):");
+        expect(formatImpact(result)).toContain("does not declare a property \"price\"");
       },
     );
   });
@@ -454,6 +479,130 @@ describe("script parsing", () => {
         expect(warning?.message).toContain("script:");
       },
     );
+  });
+});
+
+describe("script coverage counters", () => {
+  it("counts every .js file and warns about .ts sources it cannot analyse", async () => {
+    await withProject(
+      {
+        "app.json": JSON.stringify({ pages: ["pages/index/index"] }, null, 2),
+        "pages/index/index.wxml": "<view>{{title}}</view>",
+        "pages/index/index.js":
+          "Page({\n  onTap() {\n    this.setData({ title: \"x\" });\n  },\n});\n",
+        // A helper no unit owns: still parsed, still counted.
+        "utils/math.js": "export const add = (a, b) => a + b;\n",
+        // No unit owns this one either, and it does not parse: a reported gap.
+        "utils/helper.js": "function broken( {\n",
+        "utils/format.ts": "export const fmt = (v: number) => String(v);\n",
+      },
+      async (dir) => {
+        const graph = await buildGraph(dir);
+
+        expect(graph.stats).toMatchObject({
+          js_files: 3,
+          js_parsed: 2,
+          js_unresolved: 1,
+          ts_files: 1,
+        });
+        expect(graph.warnings).toContainEqual(
+          expect.objectContaining({ code: "unresolved_file", file: "utils/helper.js" }),
+        );
+        expect(graph.warnings).toContainEqual(
+          expect.objectContaining({ code: "unsupported_ts", file: "utils/format.ts" }),
+        );
+        // .ts sources are inside the stamp, so editing one invalidates the graph.
+        expect(graph.stamp?.files).toBe(6);
+        // Parsing a helper never invents nodes for it.
+        expect(
+          graph.nodes.some(
+            (node) => node.kind === "handler" && node.owner === "utils/math",
+          ),
+        ).toBe(false);
+      },
+    );
+  });
+});
+
+describe("caller walk", () => {
+  it("walks includes edges upward through intermediate components", async () => {
+    await withProject(
+      {
+        "app.json": JSON.stringify({ pages: ["pages/home/index"] }, null, 2),
+        "pages/home/index.json": JSON.stringify(
+          { usingComponents: { "card-shell": "../../components/card-shell" } },
+          null,
+          2,
+        ),
+        "pages/home/index.wxml":
+          '<view><card-shell label="{{title}}"></card-shell></view>',
+        "components/card-shell.json": JSON.stringify(
+          { component: true, usingComponents: { "price-card": "./price-card" } },
+          null,
+          2,
+        ),
+        "components/card-shell.wxml":
+          '<view><price-card price="{{label}}"></price-card></view>',
+        "components/price-card.json": JSON.stringify({ component: true }, null, 2),
+        "components/price-card.wxml": "<text>{{price}}</text>",
+      },
+      async (dir) => {
+        const graph = await buildGraph(dir);
+        const result = computeImpactUp(graph, "components/price-card");
+
+        expect(result.dependents).toEqual([
+          expect.objectContaining({
+            id: "components/card-shell",
+            kind: "component",
+            depth: 1,
+            tag: "price-card",
+            file: "components/card-shell.wxml",
+            line: 1,
+          }),
+          expect.objectContaining({
+            id: "pages/home/index",
+            kind: "page",
+            depth: 2,
+            tag: "card-shell",
+            file: "pages/home/index.wxml",
+            line: 1,
+          }),
+        ]);
+
+        const rendered = formatImpactUp(result);
+        expect(rendered).toContain("reached from 2 unit(s): 1 direct host(s), 2 level(s) up");
+        expect(rendered).toContain("via <card-shell>");
+
+        // A page nobody includes has no callers.
+        expect(formatImpactUp(computeImpactUp(graph, "pages/home/index"))).toContain(
+          "(no unit includes this target)",
+        );
+      },
+    );
+  });
+});
+
+describe("search", () => {
+  it("finds nodes by id, path, tag and setData key", async () => {
+    await withProject(propertyHopProject("{{price}}"), async (dir) => {
+      const graph = await buildGraph(dir);
+
+      const byPath = searchGraph(graph, "unitprice");
+      expect(byPath.hits).toContainEqual(
+        expect.objectContaining({
+          kind: "data_field",
+          id: "pages/cart/index:items[].unitPrice",
+        }),
+      );
+
+      const byTag = searchGraph(graph, "price-card");
+      expect(byTag.hits.map((hit) => hit.kind)).toEqual(
+        expect.arrayContaining(["component", "element"]),
+      );
+
+      expect(formatSearch(byPath)).toContain('1 match for "unitprice"');
+      expect(searchGraph(graph, "no-such-node").total).toBe(0);
+    });
   });
 });
 

@@ -47,7 +47,7 @@
   <line class="rule" x1="14" y1="54" x2="999" y2="54"/>
   <text x="36.0" y="78" xml:space="preserve" class="ln"><tspan class="prompt">$</tspan><tspan class="cmd"> wxgraph build examples/demo</tspan></text>
   <text x="36.0" y="95" xml:space="preserve" class="ln">1 subpackage · 3 pages · 1 component · 19 wxml nodes · 57 edges <tspan class="timing">· 34ms</tspan></text>
-  <text x="36.0" y="112" xml:space="preserve" class="ln"><tspan class="dim">wrote .wxgraph/graph.json</tspan></text>
+  <text x="36.0" y="112" xml:space="preserve" class="ln"><tspan class="dim">wrote examples/demo/.wxgraph/graph.json</tspan></text>
   <text x="36.0" y="146" xml:space="preserve" class="ln"><tspan class="prompt">$</tspan><tspan class="cmd"> wxgraph impact components/price-card</tspan></text>
   <text x="36.0" y="163" xml:space="preserve" class="ln"><tspan class="strong">components/price-card</tspan><tspan class="dim">  (component)  included by 2 hosts</tspan></text>
   <text x="36.0" y="197" xml:space="preserve" class="ln">├─ pages/cart/index.wxml:5  &lt;price-card editing="{{editing}}" price="{{item.unitPrice}}"&gt;</text>

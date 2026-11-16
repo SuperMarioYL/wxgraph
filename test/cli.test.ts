@@ -1,4 +1,5 @@
-import { readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -7,6 +8,7 @@ import type { Graph } from "../src/graph/schema";
 
 const DEMO_DIR = path.resolve("examples/demo");
 const GRAPH_FILE = path.join(DEMO_DIR, ".wxgraph", "graph.json");
+const ROOT_DIR = process.cwd();
 
 function capture(): {
   io: { out(text: string): void; err(text: string): void };
@@ -37,6 +39,8 @@ async function readDemoGraph(): Promise<Graph> {
 
 afterAll(async () => {
   await rm(path.join(DEMO_DIR, ".wxgraph"), { recursive: true, force: true });
+  // `build examples/demo` from the repository root records the project there.
+  await rm(path.join(ROOT_DIR, ".wxgraph"), { recursive: true, force: true });
 });
 
 describe("wxgraph CLI", () => {
@@ -47,7 +51,7 @@ describe("wxgraph CLI", () => {
     expect(result.out).toContain(
       "1 subpackage · 3 pages · 1 component · 19 wxml nodes · 57 edges",
     );
-    expect(result.out).toContain("wrote .wxgraph/graph.json");
+    expect(result.out).toContain("wrote examples/demo/.wxgraph/graph.json");
 
     const graph = await readDemoGraph();
     expect(graph.stats).toMatchObject({
@@ -111,8 +115,73 @@ describe("wxgraph CLI", () => {
     );
   });
 
-  it("explains the hops of the demo's onEdit call site", async () => {
-    const result = await run(["explain", "pages/cart/index.js:20", "-C", "examples/demo"]);
+  it("answers the documented commands from the repository root after building a subdirectory", async () => {
+    const build = await run(["build", "examples/demo"]);
+    expect(build.code).toBe(0);
+    expect(build.out).toContain("wrote examples/demo/.wxgraph/graph.json");
+
+    // No -C and no cd: the build recorded the project for this directory.
+    const impact = await run(["impact", "components/price-card"]);
+    expect(impact.code).toBe(0);
+    expect(impact.out).toContain("included by 2 hosts");
+    expect(impact.out).toContain("[via prop:price]");
+
+    const stats = await run(["stats"]);
+    expect(stats.code).toBe(0);
+    expect(stats.out).toContain("graph     examples/demo/.wxgraph/graph.json");
+    expect(stats.out).toContain("4 .js files seen · 4 parsed · 0 unresolved");
+  });
+
+  it("walks the hosts of a target with --up", async () => {
+    const result = await run(["impact", "components/price-card", "--up"]);
+
+    expect(result.code).toBe(0);
+    expect(result.out).toContain("reached from 2 unit(s): 2 direct host(s), 1 level(s) up");
+    expect(result.out).toContain("via <price-card>  pages/cart/index.wxml:5");
+    expect(result.out).toContain("via <price-card>  pages/order/detail.wxml:4");
+  });
+
+  it("finds nodes by name with search", async () => {
+    const result = await run(["search", "unitPrice"]);
+
+    expect(result.code).toBe(0);
+    expect(result.out).toContain("1 match for \"unitPrice\"");
+    expect(result.out).toContain("pages/cart/index:items[].unitPrice");
+
+    const machine = await run(["search", "price-card", "--json"]);
+    expect(machine.code).toBe(0);
+    const parsed = JSON.parse(machine.out) as { total: number; hits: unknown[] };
+    expect(parsed.total).toBeGreaterThan(0);
+    expect(parsed.hits.length).toBeGreaterThan(0);
+  });
+
+  it("records the project with init and prints the agent setup", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "wxgraph-cli-init-"));
+    try {
+      await writeFile(
+        path.join(dir, "app.json"),
+        JSON.stringify({ pages: ["pages/index/index"] }, null, 2),
+        "utf8",
+      );
+      const channel = capture();
+      const code = await main(["init"], channel.io, dir);
+
+      expect(code).toBe(0);
+      expect(channel.out()).toContain("project   .");
+      expect(channel.out()).toContain("mcpServers");
+      expect(channel.out()).toContain(
+        "cp -r <wxgraph-checkout>/skills/wxgraph .claude/skills/",
+      );
+      const config = JSON.parse(
+        await readFile(path.join(dir, ".wxgraph", "config.json"), "utf8"),
+      ) as { project: string };
+      expect(config).toEqual({ project: "." });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("explains the hops of the demo's onEdit call site", async () => {    const result = await run(["explain", "pages/cart/index.js:20", "-C", "examples/demo"]);
 
     expect(result.code).toBe(0);
     expect(result.out).toContain("handler  onEdit");

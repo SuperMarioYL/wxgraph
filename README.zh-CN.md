@@ -40,32 +40,32 @@
 wxgraph 解析 manifest、模板和脚本，再把它们收敛成一张图。它拥有的边是 `rerenders`：
 从 `setData` 的 key 出发，经过数据路径、宿主属性，必要时再穿过组件声明的属性，
 最终落到一个具体的 WXML 节点。每条边都带 `file:line` 出处。任何一跳解析不出来时，
-就不产出这条边，`impact` / `explain` 会把失败的那一跳打印出来，而不是猜一个结果。
+就不产出这条边，也不会沉默：`impact` 会把失败的那一跳连同状态列在
+`unresolved hop(s)` 里，`explain` 会打印每一次尝试。
 
 ## 快速开始
 
 需要 Node 22 或更新版本。仓库自带一个很小的合成小程序 `examples/demo`，
-第一条结果只差一条命令。
+两条命令就能拿到第一个结果。
 
 ```bash
 git clone https://github.com/SuperMarioYL/wxgraph.git
 cd wxgraph
 npm ci
 npm run build
-npm link                 # 把 `wxgraph` 和 `wxgraph-mcp` 放进 PATH
-cd examples/demo
-wxgraph build
-wxgraph impact components/price-card
+node dist/cli.js build examples/demo
+node dist/cli.js impact components/price-card
 ```
 
-`wxgraph build` 建立索引并写出图文件：
+`build` 建立索引并写出图文件：
 
 ```text
 1 subpackage · 3 pages · 1 component · 19 wxml nodes · 57 edges · 34ms
-wrote .wxgraph/graph.json
+wrote examples/demo/.wxgraph/graph.json
 ```
 
-`wxgraph impact` 从图里回答影响面：
+`impact` 从图里回答影响面，不需要 `cd`，也不需要 `-C`：build 已经为当前目录
+记录了这个项目（`.wxgraph/config.json`）。
 
 ```text
 components/price-card  (component)  included by 2 hosts
@@ -87,8 +87,8 @@ components/price-card  (component)  included by 2 hosts
 示例仓库的计数和 `file:line` 是固定的；构建耗时会随机器变化。完整录制，
 包括 `--json` 输出，在 [`docs/demo-results.json`](./docs/demo-results.json)。
 
-如果全局 npm 目录不可写，可以跳过 `npm link`，把最后两条命令里的 `wxgraph`
-换成 `node ../../dist/cli.js`。
+`npm link`（或 `npm install -g .`）会把 `wxgraph` 和 `wxgraph-mcp` 放进 PATH，
+之后上面的命令可以写成 `wxgraph build examples/demo`。
 
 ## 演示
 
@@ -104,7 +104,9 @@ components/price-card  (component)  included by 2 hosts
   `[via prop:price]` 表示值穿过组件声明的 `price` 属性；`[via direct]` 表示节点就在
   `setData` 所属单元自己的模板里。
 - **`unresolved_setdata`** 不是错误，也不是猜出来的边：`onLoad` 向 `this.setData`
-  传了非字面量对象，图只记录调用点，并说明哪些 key 无法得知。
+  传了非字面量对象，图只记录调用点，并说明哪些 key 无法得知。因其他原因失败的跳转
+  （`no_binding`、`unknown_property`、`no_child_binding`）会出现在上方的
+  `unresolved hop(s)` 块里，状态与原因和 `explain` 一致。
 
 ## 工作原理
 
@@ -131,18 +133,23 @@ app.json + *.json ─┐
 `calls_setdata`、`invokes`，以及核心的 `rerenders`。没有后台进程、没有网络请求、
 没有数据库：图就是一个 JSON 文件，外加一份源码戳。
 
-脚本先按 ES module 解析，失败后再按经典 script 逐文件重试，因为小程序页面
-常写成模块，而工具文件常写成脚本。两种模式都失败的文件会变成
-`wxgraph stats` 里的 `unresolved_file` 警告，不会被静默丢掉。
+项目里被扫描到的每个 `.js` 文件都会解析——页面和组件脚本、工具模块以及其他任何
+文件，因为读不了的辅助文件同样是图里的缺口。解析先按 ES module，失败后再按经典
+script 逐文件重试；两种模式都失败的文件会变成带解析错误的 `unresolved_file` 警告，
+`wxgraph stats` 会打印看到了多少个 `.js`、成功解析多少、失败多少，缺口不会被静默
+丢掉。`.ts` 源码在同一行里计数，并给出 `unsupported_ts` 警告：v0.1 不分析它们。
 
 ## 用法
 
 ```bash
+wxgraph init [dir]               # 找到 app.json，为当前目录记录项目
 wxgraph build [dir]              # 建立索引，写出 .wxgraph/graph.json
 wxgraph impact <target>          # 改动这个目标会影响什么
+wxgraph impact <target> --up     # 反向遍历引用这个目标的宿主
 wxgraph impact <target> --json   # 机器可读的结构化结果
 wxgraph impact <target> -C dir   # 查询当前目录以外的项目
 wxgraph explain <edge>           # 一条 setData 调用或一个节点的全部跳转
+wxgraph search <query>           # 查找节点 id、数据路径和 setData key
 wxgraph stats                    # 计数，以及解析器读不了的内容
 ```
 
@@ -150,7 +157,12 @@ wxgraph stats                    # 计数，以及解析器读不了的内容
 （`components/price-card.wxml`）或节点 id（`components/price-card.wxml:4:view`）。
 `<edge>` 支持 `set_data` 节点 id（`pages/cart/index:20`）、`file:line` 调用点
 （`pages/cart/index.js:20`）或节点 id。`explain` 会打印成功的跳转，也会打印失败的
-跳转及其状态：`non_literal`、`no_binding`、`unknown_property`、`no_child_binding`。
+跳转及其状态：`non_literal`、`no_binding`、`unknown_property`、`no_child_binding`；
+`impact` 会把与被查目标相关的失败跳转列在 `unresolved hop(s)` 下。
+
+`init` 会在执行命令的目录写出 `.wxgraph/config.json`，记录它找到的项目；`build`
+在项目不是当前目录时也会写出同一个文件。因此不带 `-C` 的查询会先用当前目录里的图，
+否则用 `init` 或最近一次 `build` 在这里记录的项目。
 
 查询命令都会先校验图的源码戳。图缺失或过期时只回一行：
 
@@ -181,9 +193,10 @@ wxgraph: graph is stale (sources changed since the last build) — run wxgraph b
 
 | 工具 | 用途 |
 | --- | --- |
-| `wxgraph_impact` | 页面、组件或节点的影响面；`json: true` 返回结构化结果 |
+| `wxgraph_impact` | 页面、组件或节点的影响面；`json: true` 返回结构化结果，`up: true` 反向遍历宿主 |
 | `wxgraph_explain` | 一条 `setData` 调用或一个节点的全部跳转，包括失败的跳转 |
-| `wxgraph_stats` | 计数、警告、读不了的文件、解析不了的组件 |
+| `wxgraph_search` | 按名称、路径、标签或 `setData` key 查找节点 id |
+| `wxgraph_stats` | 计数、警告、读不了的 `.js`、未分析的 `.ts`、解析不了的组件 |
 | `wxgraph_build` | 修改 WXML、JSON 或 JS 之后重新索引 |
 
 同样的路由逻辑也打包成了 Skill：把 `skills/wxgraph` 复制到 agent 的 skills 目录
@@ -208,14 +221,16 @@ wxgraph: graph is stale (sources changed since the last build) — run wxgraph b
   modifier 里。
 - <img src="https://api.iconify.design/tabler/terminal-2.svg?color=%236e56cf&height=16" alt="" /> **脚本。** `Page({...})`、`Component({ methods: {...} })`、handler 方法、
   字面量与嵌套字面量的 `setData` key、非字面量 `setData` 调用点、组件声明的
-  `properties`，以及 `wx.cloud.callFunction` 调用点。
+  `properties`，以及 `wx.cloud.callFunction` 调用点。扫描到的每个 `.js` 都会解析并在
+  `stats` 中计数；`.ts` 只计数并告警，不做分析。
 - <img src="https://api.iconify.design/tabler/route.svg?color=%236e56cf&height=16" alt="" /> **影响面。** `setData` key → 数据路径 → 宿主属性 → 组件属性 → 子模板绑定 →
-  节点，只有每一跳都解析成功才成立。
+  节点，只有每一跳都解析成功才成立。失败的跳转会打印出来，`impact --up` 会沿
+  `includes` 边反向走到每一层调用者。
 
 v0.1 不包含以下内容——写清楚是为了避免把图里的沉默当成答案：
 
 - 只支持原生 `.wxml` 项目。Taro、uni-app、kbone 的编译产物不在分析范围内。
-- 只解析 `.js`。`.ts` 文件不在分析范围内。
+- 只解析 `.js`。`.ts` 文件会在 `wxgraph stats` 中计数并告警，不做分析。
 - 没有 WXSS 或布局相关的边。
 - 不解析云函数函数体，只记录调用点。
 - WXML 表达式只提取数据路径，不做求值。三元表达式和方法调用不会被计算。
@@ -246,8 +261,10 @@ npm run build       # tsup → dist/cli.js, dist/mcp/server.js
 npm test            # vitest run
 ```
 
-测试覆盖解析器、图构建、属性跳转解析、源码戳契约，以及随仓库交付的示例的 CLI 输出。
-`examples/demo` 本身就是契约的一部分：CLI 测试会构建它，并断言 impact 的输出树。
+测试覆盖解析器、图构建、属性跳转解析、失败跳转报告、反向调用遍历、搜索、
+脚本与 `.ts` 计数、源码戳契约，以及随仓库交付的示例的 CLI 输出。
+`examples/demo` 本身就是契约的一部分：CLI 测试会构建它，并像快速开始那样从仓库根
+目录查询它。
 
 ## 许可证
 
